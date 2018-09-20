@@ -589,7 +589,7 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 				setTimeout(getData, 0);
 			}
 		}else{
-			if(self.getdata[dataTmpAcc.i].c.length > 0 ){
+			if(self.getdata[dataTmpAcc.i][c].length > 0 ){
 				console.log('extract produk '+dataTmpAcc.i);
 				// get data bukalapak
 				// generateProduk('produk',dataTmpAcc,);
