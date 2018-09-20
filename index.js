@@ -290,13 +290,13 @@ function generateAllDataMarket(req,res){
 										if(self.acc.data[id].accountbukalapak[timerGet.lData]){
 											//get data produk
 											let dataTmpAcc = self.acc.data[id].accountbukalapak[timerGet.lData];
-											self.getdata[dataTmpAcc.i] = {};
 	
 											// callTime.getProdukSale = false;
 											// callTime.getProdukNotSale = false;
 											
 											if(callTime.getProdukSale == false && callTime.getProdukNotSale == false){
 												let dataAccBukalapak = true;
+												self.getdata[dataTmpAcc.i] = {};
 												setTimeout(function dataSaleNotsale(){
 													if(dataAccBukalapak == true){
 														dataAccBukalapak = false;
