@@ -260,7 +260,7 @@ function generateAllDataMarket(req,res){
 				timerGet.timeC = 0;//self.acc.id.length;//1;
 				timerGet.status = true;
 				timerGet.lData = 0;
-				self.getdata = [];
+				self.getdata = {};
 				setTimeout(function allData(){
 					if(self.acc.id[timerGet.timeC]){
 						let id = self.acc.id[timerGet.timeC];
@@ -337,12 +337,17 @@ function generateAllDataMarket(req,res){
 																// self.getdata.push(_returns);
 																// let feedback = JSON.parse(_returns);
 																// routeCalback(req,res,feedback,where);
-																if(_returns.length <= 50){
-																	objectForeach(_returns, function (val3, prop3, obj3) {
-																		if(val3){
-																			self.getdata[dataTmpAcc.i].push(val3);
-																		}
-																	});
+																console.log('feedback length '+_returns.length);
+																if(_returns.length > 0 && _returns.length <= 50){
+																	for (let index = 0; index < _returns.length; index++) {
+																		self.getdata[dataTmpAcc.i].push(_returns[index]);
+																		
+																	}
+																	// objectForeach(_returns, function (val3, prop3, obj3) {
+																	// 	if(val3){
+																	// 		self.getdata[dataTmpAcc.i].push(val3);
+																	// 	}
+																	// });
 																	
 																	timerGet1.status = true;
 																	console.log('ada '+timerGet1.get);
