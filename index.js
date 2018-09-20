@@ -336,30 +336,15 @@ function generateAllDataMarket(req,res){
 																		console.log('data length :: '+_returns.data.length);
 																		feedback = replaceText(_returns.data);
 																	}
+
 																}
 																// let feedback = [];
 																console.log('feedback status '+feedback.length);
-																if(_returns && timerGet1.get < 2){
-																// 	objectForeach(_returns, function (val3, prop3, obj3) {
-																// 		if(val3){
-																// 			feedback.push(val3);
-																// 		}
-																// 	});
-																// }
-																// self.getdata.push(_returns);
-																
-																// routeCalback(req,res,feedback,where);
-																console.log('feedback status1 '+feedback.length);
-																// if(feedback.length > 0 && feedback.length <= 50){
-																	// for (let index = 0; index < feedback.length; index++) {
-																		self.getdata[dataTmpAcc.i].push(feedback);//feedback[index]);
-																		
-																	// }
-																	// objectForeach(_returns, function (val3, prop3, obj3) {
-																	// 	if(val3){
-																	// 		self.getdata[dataTmpAcc.i].push(val3);
-																	// 	}
-																	// });
+																if(feedback.length > 0 && feedback <= 50){
+																	console.log('feedback length '+feedback.length);
+																	for (let index = 0; index < feedback.length; index++) {
+																		self.getdata[dataTmpAcc.i].push(feedback[index]);
+																	}
 																	
 																	timerGet1.status = true;
 																	console.log('ada '+timerGet1.get);
