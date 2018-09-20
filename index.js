@@ -297,7 +297,7 @@ function generateAllDataMarket(req,res){
 											let timerGetget = 1;
 											let timerGetstatus = true;
 											let nexCallPage = false;
-											$timeout(function getData(){
+											setTimeout(function getData(){
 												if(timerGetget > 0){
 													if(timerGetstatus == true){
 														let dataPost = qs.stringify({
@@ -333,13 +333,13 @@ function generateAllDataMarket(req,res){
 														});
 
 														timerGetstatus = false;
-														$timeout(getData, 0);
+														setTimeout(getData, 0);
 													}else{
 														if(nexCallPage == true){
 															timerGetstatus = true;
 															timerGetget++;
 														}
-														$timeout(getData, 0);
+														setTimeout(getData, 0);
 													}
 												}else{
 													// if(self.dataConvert.allData.length > 0 ){
