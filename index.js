@@ -340,10 +340,11 @@ function generateAllDataMarket(req,res){
 																}
 																// let feedback = [];
 																console.log('feedback status '+feedback.length);
-																if(feedback.length > 0 && feedback <= 50){
+																if(feedback.length > 0 && feedback.length <= 50){
 																	console.log('feedback length '+feedback.length);
-																	for (let index = 0; index < feedback.length; index++) {
-																		self.getdata[dataTmpAcc.i].push(feedback[index]);
+																	for (let i = 0; i < feedback.length; i++) {
+																		console.log('data '+dataTmpAcc.i+' ke :'+i)
+																		self.getdata[dataTmpAcc.i].push(feedback[i]);
 																	}
 																	
 																	timerGet1.status = true;
