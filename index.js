@@ -281,75 +281,83 @@ function generateAllDataMarket(req,res){
 											// 		datapush:self.acc.data[id].accountbukalapak[timerGet.lData]
 											// 	}
 											// );marketPlaceJobs2
-											let dataPost = {//qs.stringify({
-												pass: self._paramsData.pass,
-												met: self._paramsData.met,
-												_w:'test',
-												UID:id,
-												u:self.acc.data[id].accountbukalapak[timerGet.lData].i,
-												p:self.acc.data[id].accountbukalapak[timerGet.lData].t,
-												c:'getProdukNotSale',
-												d:0,
-												_w:'bukalapak',
-												feedback:'',
-												accountData:self.acc.data[id].accountbukalapak[timerGet.lData]
-											};//);
-											self.timerGet.get = 1;
-											self.timerGet.status = true;
+											// let dataPost = {//qs.stringify({
+											// 	pass: self._paramsData.pass,
+											// 	met: self._paramsData.met,
+											// 	_w:'test',
+											// 	UID:id,
+											// 	u:self.acc.data[id].accountbukalapak[timerGet.lData].i,
+											// 	p:self.acc.data[id].accountbukalapak[timerGet.lData].t,
+											// 	c:'getProdukNotSale',
+											// 	d:0,
+											// 	_w:'bukalapak',
+											// 	feedback:'',
+											// 	accountData:self.acc.data[id].accountbukalapak[timerGet.lData]
+											// };//);
+											let timerGetget = 1;
+											let timerGetstatus = true;
+											let nexCallPage = false;
 											$timeout(function getData(){
-												if(self.timerGet.get > 0){
-													if(self.timerGet.status == true){
-														feed = {
-															'u' : self.accountMarket.id,
-															'p' : self.accountMarket.token,
-															'c' : data.id,
-															'd' : self.timerGet.get,
-															'_w' : self.aSelectMarket.name.toLowerCase()
-														};
-														self.ajacCall(feed,data.id);
-														self.timerGet.status = false;
+												if(timerGetget > 0){
+													if(timerGetstatus == true){
+														let dataPost = qs.stringify({
+															pass: self._paramsData.pass,
+															met: self._paramsData.met,
+															u : self.acc.data[id].accountbukalapak[timerGet.lData].i,
+															p : self.acc.data[id].accountbukalapak[timerGet.lData].t,
+															c : 'getProdukNotSale',
+															d : timerGetget,
+															_w : 'bukalapak'
+														});
+														// self.ajacCall(feed,data.id);
+														request.get({
+															headers: {'content-type': 'application/x-www-form-urlencoded'},
+															url: self._paramsData.uri+'?'+dataPost,
+															body: dataPost
+														}, function(error, response, body){
+															if(!error && response.body){
+																let _returns = response.body;
+																self.getdata.push(_returns);
+																// let feedback = JSON.parse(_returns);
+																nexCallPage = true;
+																console.log('ada');
+																// timerGet.timeC = 0;
+																// routeCalback(req,res,feedback,where);
+															}else{
+																console.log('err -> '+where+' :: '+error);
+																// viewDataCallbcak('error',req,res)
+																// timerGet.timeC = 0;
+																// timerGet.status = false;
+																nexCallPage = true;
+															}
+														});
+
+														timerGetstatus = false;
 														$timeout(getData, 0);
 													}else{
+														if(nexCallPage == true){
+															timerGetstatus = true;
+															timerGetget++;
+														}
 														$timeout(getData, 0);
 													}
 												}else{
-													if(self.dataConvert.allData.length > 0 ){
-														console.log('default',self.default,'dataPostProduk',self.dataPostProduk)
-
-														self.generateProduk('produk');
-													}
+													// if(self.dataConvert.allData.length > 0 ){
+														// console.log('default',self.default,'dataPostProduk',self.dataPostProduk)
+														// self.generateProduk('produk');
+													// }
+													// get data bukalapak
+													timerGet.lData++;
+													setTimeout(getDataAccoun,0);
 												}
 											},0);
-											// request.get({
-											// 	headers: {'content-type': 'application/x-www-form-urlencoded'},
-											// 	url: self._paramsData.uri+'2?'+dataPost,
-											// 	body: dataPost
-											// }, function(error, response, body){
-											// 	if(!error && response.body){
-											// 		let _returns = response.body;
-											// 		self.getdata.push(_returns); 
-											// 		// let feedback = JSON.parse(_returns);
-											// 		console.log(_returns);
-											// 		// timerGet.timeC = 0;
-											// 		if(dataAccount < )
-											// 		timerGet.lData++;
-											// 		timerGet.status = false;
-											// 		// routeCalback(req,res,feedback,where);
-											// 	}else{
-											// 		console.log('err -> '+where+' :: '+error);
-											// 		// viewDataCallbcak('error',req,res)
-											// 		timerGet.timeC = 0;
-											// 		timerGet.status = false;
-											// 	}
-											// });
-
-											self.getdata.push(dataPost);
-											// get data bukalapak
-											timerGet.lData++;
+											// self.getdata.push(dataPost);
+											// // get data bukalapak
+											// timerGet.lData++;
 										}else{
 											timerGet.lData++;
+											setTimeout(getDataAccoun,0);
 										}
-										setTimeout(getDataAccoun,0);
 									}else{
 										timerGet.timeC++;
 										setTimeout(allData,0);
