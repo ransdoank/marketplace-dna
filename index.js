@@ -589,11 +589,11 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 				setTimeout(getData, 0);
 			}
 		}else{
-			if(self.getdata[dataTmpAcc.i][c].length > 0 ){
-				console.log('extract produk '+dataTmpAcc.i);
+			// if(self.getdata[dataTmpAcc.i][c].length > 0 ){
+				// console.log('extract produk '+dataTmpAcc.i);
 				// get data bukalapak
 				// generateProduk('produk',dataTmpAcc,);
-			}
+			// }
 			// timerGet.lData++;
 			// setTimeout(getDataAccoun,0);
 			// return true;
