@@ -328,7 +328,8 @@ function generateAllDataMarket(req,res){
 														}, function(error, response, body){
 															if(!error && response.body){
 																let _returns =  response.body;//replaceText(response.body);
-																let feedback = [];
+																// let feedback = [];
+																console.log('feedback status '+_returns.status);
 																if(_returns && timerGet1.get < 2){
 																// 	objectForeach(_returns, function (val3, prop3, obj3) {
 																// 		if(val3){
@@ -337,9 +338,9 @@ function generateAllDataMarket(req,res){
 																// 	});
 																// }
 																// self.getdata.push(_returns);
-																// let feedback = JSON.parse(_returns);
+																let feedback = JSON.parse(_returns);
 																// routeCalback(req,res,feedback,where);
-																console.log('feedback length ');
+																console.log('feedback status1 '+feedback.status);
 																// if(feedback.length > 0 && feedback.length <= 50){
 																	// for (let index = 0; index < feedback.length; index++) {
 																		self.getdata[dataTmpAcc.i].push(_returns);//feedback[index]);
