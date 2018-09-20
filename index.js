@@ -327,7 +327,8 @@ function generateAllDataMarket(req,res){
 															body: dataPost
 														}, function(error, response, body){
 															if(!error && response.body){
-																let _returns =  response.body;//replaceText(response.body);
+																let _returns =  response.body;
+																if(_returns.status == true && _returns.data)
 																// let feedback = [];
 																console.log('feedback status '+_returns.status);
 																if(_returns && timerGet1.get < 2){
@@ -340,7 +341,7 @@ function generateAllDataMarket(req,res){
 																// self.getdata.push(_returns);
 																let feedback = JSON.parse(_returns);
 																// routeCalback(req,res,feedback,where);
-																console.log('feedback status1 '+feedback.status);
+																console.log('feedback status1 '+feedback.data.length);
 																// if(feedback.length > 0 && feedback.length <= 50){
 																	// for (let index = 0; index < feedback.length; index++) {
 																		self.getdata[dataTmpAcc.i].push(_returns);//feedback[index]);
