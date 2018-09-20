@@ -349,7 +349,7 @@ function generateAllDataMarket(req,res){
 																console.log('feedback status1 '+feedback.length);
 																// if(feedback.length > 0 && feedback.length <= 50){
 																	// for (let index = 0; index < feedback.length; index++) {
-																		self.getdata[dataTmpAcc.i].push(_returns);//feedback[index]);
+																		self.getdata[dataTmpAcc.i].push(feedback);//feedback[index]);
 																		
 																	// }
 																	// objectForeach(_returns, function (val3, prop3, obj3) {
