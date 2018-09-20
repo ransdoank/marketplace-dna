@@ -327,13 +327,14 @@ function generateAllDataMarket(req,res){
 															body: dataPost
 														}, function(error, response, body){
 															if(!error && response.body){
-																let _returns =  response.body;
+																let _returns =  JSON.parse(response.body);//response.body;
 																let feedback = [];
+																console.log('_returns status:: '+_returns.status+', data '+_returns.data.length);
 																if(_returns.status == true && _returns.data){
 																	if(_returns.data > 0){
-																		let setData = JSON.parse(_returns.data);
-																		console.log('data length :: '+setData.data.length);
-																		feedback = replaceText(setData.data);
+																		// let setData = ;
+																		console.log('data length :: '+_returns.data.length);
+																		feedback = replaceText(_returns.data);
 																	}
 																}
 																// let feedback = [];
