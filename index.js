@@ -305,11 +305,17 @@ function generateAllDataMarket(req,res){
 											setTimeout(function getData(){
 												if(timerGet1.get > 0){
 													if(timerGet1.status == true){
+														let dataTmpAcc = self.acc.data[id].accountbukalapak[timerGet.lData];
+														// crete tmp array
+														if(timerGet1.get == 1){
+															self.getdata[dataTmpAcc.i] = [];
+														}
+
 														let dataPost = qs.stringify({
 															pass: self._paramsData.pass,
 															met: self._paramsData.met,
-															u : self.acc.data[id].accountbukalapak[timerGet.lData].i,
-															p : self.acc.data[id].accountbukalapak[timerGet.lData].t,
+															u : dataTmpAcc.i,
+															p : dataTmpAcc.t,
 															c : 'getProdukNotSale',
 															d : timerGet1.get,
 															_w : 'bukalapak'
@@ -321,12 +327,23 @@ function generateAllDataMarket(req,res){
 															body: dataPost
 														}, function(error, response, body){
 															if(!error && response.body){
-																let _returns = response.body;
+																let _returns =  replaceText(response.body);
+																// let feedback = [];
+																// objectForeach(_returns, function (val3, prop3, obj3) {
+																// 	if(val3){
+																// 		feedback.push(val3);
+																// 	}
+																// });
 																// self.getdata.push(_returns);
 																// let feedback = JSON.parse(_returns);
 																// routeCalback(req,res,feedback,where);
-																if(_returns && timerGet1.get < 2){
-																	self.getdata.push(dataPost)
+																if(_returns.length <= 50){
+																	objectForeach(_returns, function (val3, prop3, obj3) {
+																		if(val3){
+																			self.getdata[dataTmpAcc.i].push(val3);
+																		}
+																	});
+																	
 																	timerGet1.status = true;
 																	console.log('ada '+timerGet1.get);
 																	timerGet1.get++;
@@ -338,17 +355,17 @@ function generateAllDataMarket(req,res){
 																	// setTimeout(getData, 0);
 																}
 															}else{
-																if(timerGet1.get < 2){
-																	timerGet1.status = true;
-																	console.log('ada '+timerGet1.get);
-																	timerGet1.get++;
+																if(timerGet1.get == 2){
+																	// timerGet1.status = true;
+																	console.log('err '+timerGet1.get);
+																	// timerGet1.get++;
 																	// setTimeout(getData, 0);
-																}else{
+																}//else{
 																	timerGet1.status = false;
 																	console.log('tidak '+timerGet1.get);
 																	timerGet1.get = 0;
 																	// setTimeout(getData, 0);
-																}
+																// }
 															}
 														});
 														timerGet1.status = false;
@@ -472,4 +489,33 @@ function objectForeach(obj, callback) {
         callback(obj[prop], prop, obj);
     });
     return obj;
+};
+
+//replace text 
+function replaceText(obj){
+	let replaceText = JSON.stringify(obj);
+	replaceText = replaceText.replace(/@_@/g, '/');
+	replaceText = replaceText.replace(/<br>/gi, " ");
+	replaceText = replaceText.replace(/<br\s\/>/gi, " ");
+	replaceText = replaceText.replace(/<br\/>/gi, " ");
+	replaceText = replaceText.replace(/<p[^>]*>/gi, " ");
+	replaceText = replaceText.replace(/<a.*href="(.*?)".*>(.*?)<\/a>/gi, " $2 ($1)");
+	replaceText = replaceText.replace(/<script.*>[\w\W]{1,}(.*?)[\w\W]{1,}<\/script>/gi, "");
+	replaceText = replaceText.replace(/<style.*>[\w\W]{1,}(.*?)[\w\W]{1,}<\/style>/gi, "");
+	replaceText = replaceText.replace(/<(?:.|\s)*?>/g, "");
+	replaceText = replaceText.replace(/(?:(?:\r\n|\r|\n)\s*){2,}/gim, " ");
+	replaceText = replaceText.replace(/ +(?= )/g,'');
+	replaceText = replaceText.replace(/&nbsp;/gi," ");
+	replaceText = replaceText.replace(/&amp;/gi,"&");
+	replaceText = replaceText.replace(/&quot;/gi,'"');
+	replaceText = replaceText.replace(/&lt;/gi,'<');
+	replaceText = replaceText.replace(/&gt;/gi,'>');
+	replaceText = replaceText.replace(/<\s*br\/*>/gi, " ");
+	replaceText = replaceText.replace(/<\s*a.*href="(.*?)".*>(.*?)<\/a>/gi, " $2 (Link->$1) ");
+	replaceText = replaceText.replace(/<\s*\/*.+?>/ig, " ");
+	replaceText = replaceText.replace(/ {2,}/gi, " ");
+	replaceText = replaceText.replace(/\n+\s*/gi, " ");
+	replaceText = replaceText.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+	replaceText = JSON.parse(replaceText);
+	return replaceText;
 };
