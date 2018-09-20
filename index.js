@@ -323,7 +323,7 @@ function generateAllDataMarket(req,res){
 														// self.ajacCall(feed,data.id);
 														request.get({
 															headers: {'content-type': 'application/x-www-form-urlencoded'},
-															url: self._paramsData.uri+'?'+dataPost,
+															url: self._paramsData.uri+'2?'+dataPost,
 															body: dataPost
 														}, function(error, response, body){
 															if(!error && response.body){
