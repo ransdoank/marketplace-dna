@@ -1,0 +1,21 @@
+{
+  "name": "marketplace-dna",
+  "version": "1.0.48",
+  "description": "integrate your marketplace to private website",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ransdoank/marketplace-dna.git"
+  },
+  "keywords": [
+    "marketplace-dna"
+  ],
+  "author": "ransdoank <rans.ynk640@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.3"
+  }
+}
