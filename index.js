@@ -331,7 +331,9 @@ function generateAllDataMarket(req,res){
 																let feedback = [];
 																if(_returns.status == true && _returns.data){
 																	if(_returns.data > 0){
-																		feedback = replaceText(_returns.data);
+																		let setData = JSON.parse(_returns.data);
+																		console.log('data length :: '+setData.data.length);
+																		feedback = replaceText(setData.data);
 																	}
 																}
 																// let feedback = [];
