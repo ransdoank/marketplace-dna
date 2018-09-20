@@ -330,31 +330,25 @@ function generateAllDataMarket(req,res){
 																	timerGet1.status = true;
 																	console.log('ada '+timerGet1.get);
 																	timerGet1.get++;
-																	setTimeout(getData, 0);
+																	// setTimeout(getData, 0);
 																}else{
 																	timerGet1.status = false;
-																	console.log('ada '+timerGet1.get);
+																	console.log('tidak '+timerGet1.get);
 																	timerGet1.get = 0;
-																	setTimeout(getData, 0);
+																	// setTimeout(getData, 0);
 																}
 															}else{
-																console.log('err -> '+where+' :: '+error);
-																// viewDataCallbcak('error',req,res)
-																// timerGet.timeC = 0;
 																if(timerGet1.get < 2){
 																	timerGet1.status = true;
 																	console.log('ada '+timerGet1.get);
 																	timerGet1.get++;
-																	setTimeout(getData, 0);
+																	// setTimeout(getData, 0);
 																}else{
 																	timerGet1.status = false;
-																	console.log('ada '+timerGet1.get);
+																	console.log('tidak '+timerGet1.get);
 																	timerGet1.get = 0;
-																	setTimeout(getData, 0);
+																	// setTimeout(getData, 0);
 																}
-																// timerGet1.status = false;
-																// timerGet1.get++;
-																// nexCallPage = true;
 															}
 														});
 														timerGet1.status = false;
