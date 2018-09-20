@@ -329,7 +329,7 @@ function generateAllDataMarket(req,res){
 															if(!error && response.body){
 																let _returns =  replaceText(response.body);
 																let feedback = [];
-																if(_returns){
+																if(_returns && timerGet1.get < 2){
 																// 	objectForeach(_returns, function (val3, prop3, obj3) {
 																// 		if(val3){
 																// 			feedback.push(val3);
