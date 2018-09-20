@@ -331,7 +331,7 @@ function generateAllDataMarket(req,res){
 																let feedback = [];
 																console.log('_returns status:: '+_returns.status+', data '+_returns.data.length);
 																if(_returns.status == true && _returns.data){
-																	if(_returns.data > 0){
+																	if(_returns.data.length > 0){
 																		// let setData = ;
 																		console.log('data length :: '+_returns.data.length);
 																		feedback = replaceText(_returns.data);
