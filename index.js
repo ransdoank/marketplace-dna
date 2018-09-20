@@ -330,21 +330,21 @@ function generateAllDataMarket(req,res){
 																let _returns =  replaceText(response.body);
 																let feedback = [];
 																if(_returns){
-																	objectForeach(_returns, function (val3, prop3, obj3) {
-																		if(val3){
-																			feedback.push(val3);
-																		}
-																	});
-																}
+																// 	objectForeach(_returns, function (val3, prop3, obj3) {
+																// 		if(val3){
+																// 			feedback.push(val3);
+																// 		}
+																// 	});
+																// }
 																// self.getdata.push(_returns);
 																// let feedback = JSON.parse(_returns);
 																// routeCalback(req,res,feedback,where);
-																console.log('feedback length '+feedback.length);
-																if(feedback.length > 0 && feedback.length <= 50){
-																	for (let index = 0; index < feedback.length; index++) {
-																		self.getdata[dataTmpAcc.i].push(feedback[index]);
+																console.log('feedback length ');
+																// if(feedback.length > 0 && feedback.length <= 50){
+																	// for (let index = 0; index < feedback.length; index++) {
+																		self.getdata[dataTmpAcc.i].push(_returns);//feedback[index]);
 																		
-																	}
+																	// }
 																	// objectForeach(_returns, function (val3, prop3, obj3) {
 																	// 	if(val3){
 																	// 		self.getdata[dataTmpAcc.i].push(val3);
