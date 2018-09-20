@@ -524,7 +524,7 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 				// crete tmp array
 				if(timerGet1.get == 1){
 					// 
-					self.getdata[dataTmpAcc.i][c] = [];
+					self.getdata[dataTmpAcc.i].c = [];
 				}
 
 				let dataPost = qs.stringify({
@@ -556,7 +556,7 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 						if(feedback.length > 0 && feedback.length <= 50){
 							console.log('feedback length '+feedback.length);
 							for (let i = 0; i < feedback.length; i++) {
-								self.getdata[dataTmpAcc.i][c].push(feedback[i]);
+								self.getdata[dataTmpAcc.i].c.push(feedback[i]);
 							}
 
 							timerGet1.status = true;
@@ -579,7 +579,7 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 				setTimeout(getData, 0);
 			}
 		}else{
-			if(self.getdata[dataTmpAcc.i][c].length > 0 ){
+			if(self.getdata[dataTmpAcc.i].c.length > 0 ){
 				console.log('extract produk '+dataTmpAcc.i);
 				// get data bukalapak
 				// generateProduk('produk',dataTmpAcc,);
