@@ -300,7 +300,8 @@ function generateAllDataMarket(req,res){
 													getProdukSaleNotsale(dataTmpAcc,'getProdukNotSale');
 													setTimeout(dataSaleNotsale,0);
 												}else{
-													if(callTime.getProdukSale == true && callTime.getProdukNotSale == true){
+													if(//callTime.getProdukSale == true && 
+														callTime.getProdukNotSale == true){
 														timerGet.lData++;
 														dataAccBukalapak = false;
 														setTimeout(getDataAccoun,0);
