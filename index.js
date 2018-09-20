@@ -70,6 +70,11 @@ let timerGet = {
 	status : false,
 	lData : 0
 }
+let timerGet1 = {
+	timeC : 0,
+	status : false,
+	lData : 0
+}
 
 function viewDataCallbcak(data,req,res){
 	res.send(data);
@@ -294,19 +299,19 @@ function generateAllDataMarket(req,res){
 											// 	feedback:'',
 											// 	accountData:self.acc.data[id].accountbukalapak[timerGet.lData]
 											// };//);
-											let timerGetget = 1;
-											let timerGetstatus = true;
-											let nexCallPage = false;
+											timerGet1.get = 1;
+											timerGet1.status = true;
+											// let nexCallPage = false;
 											setTimeout(function getData(){
-												if(timerGetget > 0){
-													if(timerGetstatus == true){
+												if(timerGet1.get > 0){
+													if(timerGet1.status == true){
 														let dataPost = qs.stringify({
 															pass: self._paramsData.pass,
 															met: self._paramsData.met,
 															u : self.acc.data[id].accountbukalapak[timerGet.lData].i,
 															p : self.acc.data[id].accountbukalapak[timerGet.lData].t,
 															c : 'getProdukNotSale',
-															d : timerGetget,
+															d : timerGet1.get,
 															_w : 'bukalapak'
 														});
 														// self.ajacCall(feed,data.id);
@@ -317,28 +322,48 @@ function generateAllDataMarket(req,res){
 														}, function(error, response, body){
 															if(!error && response.body){
 																let _returns = response.body;
-																self.getdata.push(_returns);
+																// self.getdata.push(_returns);
 																// let feedback = JSON.parse(_returns);
-																nexCallPage = true;
-																console.log('ada');
-																// timerGet.timeC = 0;
 																// routeCalback(req,res,feedback,where);
+																if(_returns && timerGet1.get < 2){
+																	self.getdata.push(dataPost)
+																	timerGet1.status = true;
+																	console.log('ada '+timerGet1.get);
+																	timerGet1.get++;
+																	setTimeout(getData, 0);
+																}else{
+																	timerGet1.status = false;
+																	console.log('ada '+timerGet1.get);
+																	timerGet1.get = 0;
+																	setTimeout(getData, 0);
+																}
 															}else{
 																console.log('err -> '+where+' :: '+error);
 																// viewDataCallbcak('error',req,res)
 																// timerGet.timeC = 0;
-																// timerGet.status = false;
-																nexCallPage = true;
+																if(timerGet1.get < 2){
+																	timerGet1.status = true;
+																	console.log('ada '+timerGet1.get);
+																	timerGet1.get++;
+																	setTimeout(getData, 0);
+																}else{
+																	timerGet1.status = false;
+																	console.log('ada '+timerGet1.get);
+																	timerGet1.get = 0;
+																	setTimeout(getData, 0);
+																}
+																// timerGet1.status = false;
+																// timerGet1.get++;
+																// nexCallPage = true;
 															}
 														});
-
 														timerGetstatus = false;
 														setTimeout(getData, 0);
 													}else{
-														if(nexCallPage == true){
-															timerGetstatus = true;
-															timerGetget++;
-														}
+														// if(nexCallPage == true){
+														// 	timerGetstatus = true;
+														// 	timerGetget++;
+														// }
 														setTimeout(getData, 0);
 													}
 												}else{
