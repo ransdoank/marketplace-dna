@@ -327,7 +327,7 @@ function generateAllDataMarket(req,res){
 															body: dataPost
 														}, function(error, response, body){
 															if(!error && response.body){
-																let _returns =  replaceText(response.body);
+																let _returns =  response.body;//replaceText(response.body);
 																let feedback = [];
 																if(_returns && timerGet1.get < 2){
 																// 	objectForeach(_returns, function (val3, prop3, obj3) {
