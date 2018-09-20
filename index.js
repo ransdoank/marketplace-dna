@@ -357,7 +357,7 @@ function generateAllDataMarket(req,res){
 																// nexCallPage = true;
 															}
 														});
-														timerGetstatus = false;
+														timerGet1.status = false;
 														setTimeout(getData, 0);
 													}else{
 														// if(nexCallPage == true){
