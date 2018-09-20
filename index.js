@@ -524,11 +524,6 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 				// crete tmp array
 				if(timerGet1.get == 1){
 					self.getdata[dataTmpAcc.i][c] = [];
-					if(c == 'getProdukSale'){
-						self.getdata[dataTmpAcc.i].getProdukSale2 = [];
-					}else if(c == 'getProdukNotSale'){
-						self.getdata[dataTmpAcc.i].getProdukSale2 = [];
-					}
 				}
 
 				let dataPost = qs.stringify({
@@ -561,12 +556,12 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 							console.log('feedback length '+feedback.length);
 							for (let i = 0; i < feedback.length; i++) {
 								self.getdata[dataTmpAcc.i][c].push(feedback[i]);
-								if(c == 'getProdukSale'){
-									self.getdata[dataTmpAcc.i].getProdukSale2.push(feedback[i]);
-								}
-								if(c == 'getProdukNotSale'){
-									self.getdata[dataTmpAcc.i].getProdukSale2.push(feedback[i]);
-								}
+								// if(c == 'getProdukSale'){
+								// 	self.getdata[dataTmpAcc.i].getProdukSale2.push(feedback[i]);
+								// }
+								// if(c == 'getProdukNotSale'){
+								// 	self.getdata[dataTmpAcc.i].getProdukSale2.push(feedback[i]);
+								// }
 							}
 
 							timerGet1.status = true;
