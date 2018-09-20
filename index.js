@@ -290,6 +290,7 @@ function generateAllDataMarket(req,res){
 													if(timerGet1.status == true){
 														// crete tmp array
 														if(timerGet1.get == 1){
+															self.getdata[dataTmpAcc.i] = [];
 															self.getdata[dataTmpAcc.i]['getProdukNotSale'] = [];
 														}
 
