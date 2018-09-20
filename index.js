@@ -296,7 +296,7 @@ function generateAllDataMarket(req,res){
 												if(dataAccBukalapak == true){
 													dataAccBukalapak = false;
 													//create params account
-													getProdukSaleNotsale(dataTmpAcc,'getProdukSale');
+													// getProdukSaleNotsale(dataTmpAcc,'getProdukSale');
 													getProdukSaleNotsale(dataTmpAcc,'getProdukNotSale');
 													setTimeout(dataSaleNotsale,0);
 												}else{
