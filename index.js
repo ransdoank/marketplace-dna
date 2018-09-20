@@ -280,35 +280,17 @@ function generateAllDataMarket(req,res){
 								setTimeout(function getDataAccoun(){
 									if(timerGet.lData < self.acc.data[id].accountbukalapak.length){
 										if(self.acc.data[id].accountbukalapak[timerGet.lData]){
-											// self.getdata.push(
-											// 	{
-											// 		datake:timerGet.lData,
-											// 		datapush:self.acc.data[id].accountbukalapak[timerGet.lData]
-											// 	}
-											// );marketPlaceJobs2
-											// let dataPost = {//qs.stringify({
-											// 	pass: self._paramsData.pass,
-											// 	met: self._paramsData.met,
-											// 	_w:'test',
-											// 	UID:id,
-											// 	u:self.acc.data[id].accountbukalapak[timerGet.lData].i,
-											// 	p:self.acc.data[id].accountbukalapak[timerGet.lData].t,
-											// 	c:'getProdukNotSale',
-											// 	d:0,
-											// 	_w:'bukalapak',
-											// 	feedback:'',
-											// 	accountData:self.acc.data[id].accountbukalapak[timerGet.lData]
-											// };//);
+											//get data produk
 											timerGet1.get = 1;
 											timerGet1.status = true;
-											// let nexCallPage = false;
+											let dataTmpAcc = self.acc.data[id].accountbukalapak[timerGet.lData];
+
 											setTimeout(function getData(){
 												if(timerGet1.get > 0){
 													if(timerGet1.status == true){
-														let dataTmpAcc = self.acc.data[id].accountbukalapak[timerGet.lData];
 														// crete tmp array
 														if(timerGet1.get == 1){
-															self.getdata[dataTmpAcc.i] = [];
+															self.getdata[dataTmpAcc.i]['getProdukNotSale'] = [];
 														}
 
 														let dataPost = qs.stringify({
@@ -320,72 +302,53 @@ function generateAllDataMarket(req,res){
 															d : timerGet1.get,
 															_w : 'bukalapak'
 														});
-														// self.ajacCall(feed,data.id);
 														request.get({
 															headers: {'content-type': 'application/x-www-form-urlencoded'},
 															url: self._paramsData.uri+'2?'+dataPost,
 															body: dataPost
 														}, function(error, response, body){
 															if(!error && response.body){
-																let _returns =  JSON.parse(response.body);//response.body;
+																let _returns =  JSON.parse(response.body);
 																let feedback = [];
 																console.log('_returns status:: '+_returns.status+', data '+_returns.data.length);
 																if(_returns.status == true && _returns.data){
 																	if(_returns.data.length > 0){
-																		// let setData = ;
-																		console.log('data length :: '+_returns.data.length);
 																		feedback = replaceText(_returns.data);
 																	}
 
 																}
-																// let feedback = [];
-																console.log('feedback status '+feedback.length);
+
 																if(feedback.length > 0 && feedback.length <= 50){
 																	console.log('feedback length '+feedback.length);
 																	for (let i = 0; i < feedback.length; i++) {
-																		console.log('data '+dataTmpAcc.i+' ke :'+i)
-																		self.getdata[dataTmpAcc.i].push(feedback[i]);
+																		self.getdata[dataTmpAcc.i]['getProdukNotSale'].push(feedback[i]);
 																	}
-																	
+
 																	timerGet1.status = true;
-																	console.log('ada '+timerGet1.get);
 																	timerGet1.get++;
-																	// setTimeout(getData, 0);
 																}else{
 																	timerGet1.status = false;
-																	console.log('tidak '+timerGet1.get);
 																	timerGet1.get = 0;
-																	// setTimeout(getData, 0);
 																}
 															}else{
 																if(timerGet1.get == 2){
-																	// timerGet1.status = true;
-																	console.log('err '+timerGet1.get);
-																	// timerGet1.get++;
-																	// setTimeout(getData, 0);
-																}//else{
-																	timerGet1.status = false;
-																	console.log('tidak '+timerGet1.get);
-																	timerGet1.get = 0;
-																	// setTimeout(getData, 0);
-																// }
+																	console.log('error call produk');
+																}
+																timerGet1.status = false;
+																timerGet1.get = 0;
 															}
 														});
 														timerGet1.status = false;
 														setTimeout(getData, 0);
 													}else{
-														// if(nexCallPage == true){
-														// 	timerGetstatus = true;
-														// 	timerGetget++;
-														// }
 														setTimeout(getData, 0);
 													}
 												}else{
-													// if(self.dataConvert.allData.length > 0 ){
-														// console.log('default',self.default,'dataPostProduk',self.dataPostProduk)
-														// self.generateProduk('produk');
-													// }
-													// get data bukalapak
+													if(self.getdata[dataTmpAcc.i]['getProdukNotSale'].length > 0 ){
+														console.log('extract produk '+dataTmpAcc.i);
+														// get data bukalapak
+														// generateProduk('produk',dataTmpAcc,);
+													}
 													timerGet.lData++;
 													setTimeout(getDataAccoun,0);
 												}
@@ -522,3 +485,260 @@ function replaceText(obj){
 	replaceText = JSON.parse(replaceText);
 	return replaceText;
 };
+
+/*self.generateProduk = function(a){
+	console.log('self.dataConvert',self.dataConvert,' self.accountMarket', self.accountMarket)
+	let allData = [];
+	if(a == 'produk'){
+		self.dataPostProduk.list = [];
+		allData = self.dataConvert.allData;
+	}else if(a == 'transaksi'){
+		self.regulasiData.dataList = [];
+		allData = self.regulasiData.allData;
+	}
+	let feedback = [];
+	let dataPush = 0;
+	let idBrend = '';
+	let idsuplier = '';
+	let jenis = '';
+
+	let getProfile = true;
+	if(self.default.brand){
+		angular.forEach(self.default.brand,function(v,k){
+			if(v.marketPlace){
+				if(v.marketPlace.id == self.accountMarket.id && v.marketPlace.marketPlace == self.aSelectMarket.name.toLowerCase()){
+					getProfile = false;
+					idBrend = k;
+					idsuplier = '';
+					jenis = 'stok_sendiri';
+				}
+			}
+		});
+	}
+	if(getProfile == true){
+		self.timerGet.get = 1;
+		self.timerGet.status = true;
+		$timeout(function autoPutProduk(){
+			if(self.timerGet.get > 0){
+				if(self.timerGet.status == true){
+					self.timerGet.status = false;
+					self.generateNewProfile(self.accountMarket.id,a);
+					$timeout(autoPutProduk, 0);
+				}else{
+					$timeout(autoPutProduk, 0);
+				}
+			}else{
+				self.generateProduk(a);
+
+			}
+		},0);
+	}else{
+		if(a == 'produk'){
+			self.progressBar.all = allData.length;
+		}else if(a == 'transaksi'){
+			self.progressBar.all = allData.length;
+		}
+
+		self.timerGet.get = 1;
+		self.timerGet.status = true;
+		let timeLokal = 0;
+		$timeout(function prodDelay(){
+			if(self.timerGet.get > 0){
+				if(self.timerGet.status == true && timeLokal == 0){
+					timeLokal++;
+					self.timerGet.status = false;
+					let k = self.timerGet.get-1;
+					let v = allData[k];
+
+					if(v){
+						if(a == 'produk'){
+							self.progressBar.data = v.name;
+							self.changeProgress(self.timerGet.get);
+						}else if(a == 'transaksi'){
+							self.progressBar.data = 'load produk '+v.name;
+							self.changeProgress(self.timerGet.get);
+						}
+						if(v.id){
+							let jenisProduct = '';
+							let grosir = [];
+							let status = 'gudang';
+							let varianData = [];
+							let varianDataTmp = [];
+							let desacVp = '';
+							if(v.desc){
+								desacVp = v.desc;
+							}
+							if(v.condition){
+								if(v.condition.toLowerCase() == 'new'){
+									jenisProduct = 'produk_baru';
+								}else if(v.condition.toLowerCase() == 'used'){
+									jenisProduct = 'produk_bekas';
+								}
+							}
+							if(v.wholesale){
+								if(v.wholesale.length > 0){
+									let mxP = 1;
+									for (let i = 0; i < v.wholesale.length; i++) {
+										if(mxP <= 4){
+											if(v.wholesale[i+1]){
+												grosir.push({
+													max: parseInt(v.wholesale[i+1].lower_bound) -1,
+													min: parseInt(v.wholesale[i].lower_bound),
+													harga: v.wholesale[i].price,
+												});
+												mxP++;
+											}
+										}
+									}
+								}
+							}
+							if(v.for_sale){
+								status = "active";
+							}
+							if(v.product_sku){
+								if(v.product_sku.length > 0 ){
+									angular.forEach(v.product_sku,function(vPprodSku,kPprodSku){
+										varianData.push({
+											katalog: vPprodSku.images,
+											sku: v.id.toUpperCase()+'-V'+kPprodSku+'-'+vPprodSku.sku_name,
+											harga_beli: vPprodSku.price,
+											harga_jual_normal: vPprodSku.price,
+											harga_jual_reseller: vPprodSku.price,
+											description: vPprodSku.variant_name,
+											stok: [{
+												date: new Date(),
+												description: "stok awal",
+												status: true,
+												statusOrder: false,
+												statusStok: "stok_tersedia",
+												stokIn: vPprodSku.stock,
+												stokOut: 0,
+												updateID: UlogID,
+											}]
+										});
+										varianDataTmp.push({
+											sku_origin:vPprodSku.variant_name,
+											sku_replace: v.id.toUpperCase()+'-V'+kPprodSku+'-'+vPprodSku.sku_name
+										});
+									});
+								}else{
+									varianData.push({
+										katalog: v.images,
+										sku: v.id.toUpperCase()+'-V'+k+'-'+0,
+										harga_beli: v.price,
+										harga_jual_normal: v.price,
+										harga_jual_reseller: v.price,
+										description: "",
+										stok: [{
+											date: new Date(),
+											description: "stok awal",
+											status: true,
+											statusOrder: false,
+											statusStok: "stok_tersedia",
+											stokIn: v.stock,
+											stokOut: 0,
+											updateID: UlogID,
+										}]
+									});
+									varianDataTmp.push({
+										sku_origin:v.id,
+										sku_replace: v.id.toUpperCase()+'-V'+k+'-'+0
+									});
+								}
+							}
+							if(varianData.length > 0){
+								dataPush++;
+								feedback.push({
+									berat: v.weight,
+									grosir: grosir,
+									idBrend: idBrend,
+									idParentUser : UlogEM,
+									idStaffInput: UlogID,
+									idsuplier: idsuplier,
+									jenis: jenis,
+									jenisProduct : jenisProduct,
+									kategori: v.category,
+									keterangan: desacVp,
+									nama: v.name,
+									status: status,
+									diskon: 0,
+									marketPlace:{
+										idSeller:self.accountMarket.id,
+										username:self.accountMarket.username,
+										email:self.accountMarket.email,
+										id_produk:v.id,
+										varian:varianDataTmp,
+										name: self.aSelectMarket.name.toLowerCase()
+									},
+									diskonType: '',
+									varian: varianData
+								});
+							}
+						}
+						self.timerGet.get++;
+					}else{
+						self.timerGet.get = 0;
+					}
+					$timeout(prodDelay, 0);
+				}else{
+					if(allData[self.timerGet.get-1]){
+						if(timeLokal < 100){
+							timeLokal++;
+						}else{
+							self.timerGet.status = true;
+							timeLokal = 0;
+						}
+					}else{
+						self.timerGet.get = 0;
+					}
+					
+					$timeout(prodDelay, 0);
+				}
+			}else{
+				if(feedback.length > 0){
+					if(a == 'produk'){
+						//check produk exist on database
+						let newProduk = [];
+						let tOf = false;
+						dataPush = 0;
+						angular.forEach(feedback,function(v,k){
+							if(v.marketPlace.id_produk){
+								tOf = false;
+								if(self.default.produkList.length > 0){
+									angular.forEach(self.default.produkList,function(v1,k1){
+										if(v1.id_produk == v.marketPlace.id_produk){
+											tOf = true;
+											console.log('ada yg sama')
+										}
+									});
+								}
+								if(tOf == false){
+									console.log('tidak ada yg sama')
+									dataPush++;
+									newProduk.push(v);
+								}
+							}
+						});
+						
+						self.dataPostProduk.lengthData = dataPush;
+						self.dataPostProduk.list = newProduk;
+
+						if(newProduk.length > 0 ){
+							self.notifyError2('Data baru "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+' loaded!','success');
+						}else{
+							self.notifyError2('Tidak ada data baru "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+'!','warn');
+						}
+					}else if(a == 'transaksi'){
+						self.regulasiData.dataList = feedback;
+					}
+				}else{
+					if(a == 'produk'){
+						self.notifyError2('Anda tidak mempunyai data "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+'!','error');
+					}else if(a == 'transaksi'){
+						self.regulasiData.dataList = feedback;
+					}
+				}
+			}
+		},0);            
+	}
+};*/
