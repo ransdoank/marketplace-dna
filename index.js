@@ -287,6 +287,7 @@ function generateAllDataMarket(req,res){
 										if(self.acc.data[id].accountbukalapak[timerGet.lData]){
 											//get data produk
 											let dataTmpAcc = self.acc.data[id].accountbukalapak[timerGet.lData];
+											self.getdata[dataTmpAcc.i] = {};
 	
 											let dataAccBukalapak = true;
 											callTime.getProdukSale = false;
@@ -295,13 +296,13 @@ function generateAllDataMarket(req,res){
 												if(dataAccBukalapak == true){
 													dataAccBukalapak = false;
 													//create params account
-													self.getdata[dataTmpAcc.i] = {};
 													getProdukSaleNotsale(dataTmpAcc,'getProdukSale');
 													getProdukSaleNotsale(dataTmpAcc,'getProdukNotSale');
 													setTimeout(dataSaleNotsale,0);
 												}else{
 													if(callTime.getProdukSale == true && callTime.getProdukNotSale == true){
 														timerGet.lData++;
+														dataAccBukalapak = false;
 														setTimeout(getDataAccoun,0);
 													}else{
 														setTimeout(dataSaleNotsale,0);
@@ -516,15 +517,18 @@ function replaceText(obj){
 
 
 function getProdukSaleNotsale(dataTmpAcc,c){
+	console.log('getProdukSaleNotsale'+c);
+	self.getdata[dataTmpAcc.i][c] = [];
+	
 	timerGet1.get = 1;
 	timerGet1.status = true;
 	setTimeout(function getData(){
 		if(timerGet1.get > 0){
 			if(timerGet1.status == true){
 				// crete tmp array
-				if(timerGet1.get == 1){
-					self.getdata[dataTmpAcc.i][c] = [];
-				}
+				// if(timerGet1.get == 1){
+				// 	self.getdata[dataTmpAcc.i][c] = [];
+				// }
 
 				let dataPost = qs.stringify({
 					pass: self._paramsData.pass,
@@ -594,7 +598,8 @@ function getProdukSaleNotsale(dataTmpAcc,c){
 			// return true;
 			if(c == 'getProdukSale'){
 				callTime.getProdukSale = true;
-			}else if(c == 'getProdukNotSale'){
+			}
+			if(c == 'getProdukNotSale'){
 				callTime.getProdukNotSale = true;
 			}
 
