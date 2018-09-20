@@ -346,7 +346,7 @@ function generateAllDataMarket(req,res){
 																// self.getdata.push(_returns);
 																
 																// routeCalback(req,res,feedback,where);
-																console.log('feedback status1 '+feedback.data.length);
+																console.log('feedback status1 '+feedback.length);
 																// if(feedback.length > 0 && feedback.length <= 50){
 																	// for (let index = 0; index < feedback.length; index++) {
 																		self.getdata[dataTmpAcc.i].push(_returns);//feedback[index]);
