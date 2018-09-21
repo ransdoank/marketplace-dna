@@ -1,6 +1,6 @@
 {
   "name": "marketplace-dna",
-  "version": "1.0.88",
+  "version": "1.0.89",
   "description": "integrate your marketplace to private website",
   "main": "index.js",
   "scripts": {
