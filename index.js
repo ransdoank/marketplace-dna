@@ -328,11 +328,11 @@ function generateAllDataMarket(req,res){
 													}
 												},0);
 											}else if(callTime.getProdukSale == true && callTime.getProdukNotSale == true && callTime.getTransaction == false){
-												let dataAccBukalapak1 = true;
+												let dataAccBukalapak2 = true;
 												self.getdata[dataTmpAcc.i].getTransaction = {};
 												setTimeout(function dataSaleNotsale1(){
-													if(dataAccBukalapak1 == true){
-														dataAccBukalapak1 = false;
+													if(dataAccBukalapak2 == true){
+														dataAccBukalapak2 = false;
 														getTransactionSellerFailedSuccessCustomer(dataTmpAcc,'getTransaction','bukalapak');
 														setTimeout(dataSaleNotsale1,0);
 													}else{
