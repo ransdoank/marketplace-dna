@@ -552,6 +552,7 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w){
 };
 function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 	// self.getdata[dataTmpAcc.i][c] = {};
+	self.getdata[dataTmpAcc.i].allTransaction = [];
 	self.getdata[dataTmpAcc.i][c].pending = [];
 	self.getdata[dataTmpAcc.i][c].addressed = [];
 	self.getdata[dataTmpAcc.i][c].payment_chosen = [];
@@ -596,32 +597,44 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 
 						if(feedback.length > 0 && feedback.length <= 50){
 							for (let i = 0; i < feedback.length; i++) {
+								self.getdata[dataTmpAcc.i].allTransaction.push(feedback[i]);
 								// self.getdata[dataTmpAcc.i][c].push(feedback[i]);
 								if(feedback[i].state){
 									console.log('status ke '+i+' : '+feedback[i].state);
 									if(feedback[i].state == 'pending'){
 										self.getdata[dataTmpAcc.i][c].pending.push(feedback[i]);
-									}else if(feedback[i].state == 'addressed'){
+									}
+									if(feedback[i].state == 'addressed'){
 										self.getdata[dataTmpAcc.i][c].addressed.push(feedback[i]);
-									}else if(feedback[i].state == 'payment_chosen'){
+									}
+									if(feedback[i].state == 'payment_chosen'){
 										self.getdata[dataTmpAcc.i][c].payment_chosen.push(feedback[i]);
-									}else if(feedback[i].state == 'confirm_payment'){
+									}
+									if(feedback[i].state == 'confirm_payment'){
 										self.getdata[dataTmpAcc.i][c].confirm_payment.push(feedback[i]);
-									}else if(feedback[i].state == 'paid'){
+									}
+									if(feedback[i].state == 'paid'){
 										self.getdata[dataTmpAcc.i][c].paid.push(feedback[i]);
-									}else if(feedback[i].state == 'delivered'){
+									}
+									if(feedback[i].state == 'delivered'){
 										self.getdata[dataTmpAcc.i][c].delivered.push(feedback[i]);
-									}else if(feedback[i].state == 'received'){
+									}
+									if(feedback[i].state == 'received'){
 										self.getdata[dataTmpAcc.i][c].received.push(feedback[i]);
-									}else if(feedback[i].state == 'remitted'){
+									}
+									if(feedback[i].state == 'remitted'){
 										self.getdata[dataTmpAcc.i][c].remitted.push(feedback[i]);
-									}else if(feedback[i].state == 'rejected'){
+									}
+									if(feedback[i].state == 'rejected'){
 										self.getdata[dataTmpAcc.i][c].rejected.push(feedback[i]);
-									}else if(feedback[i].state == 'cancelled'){
+									}
+									if(feedback[i].state == 'cancelled'){
 										self.getdata[dataTmpAcc.i][c].cancelled.push(feedback[i]);
-									}else if(feedback[i].state == 'expired'){
+									}
+									if(feedback[i].state == 'expired'){
 										self.getdata[dataTmpAcc.i][c].expired.push(feedback[i]);
-									}else if(feedback[i].state == 'refunded'){
+									}
+									if(feedback[i].state == 'refunded'){
 										self.getdata[dataTmpAcc.i][c].refunded.push(feedback[i]);
 									}
 								}
@@ -647,10 +660,10 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 				setTimeout(getData, 0);
 			}
 		}else{
-			if(c == 'getTransaction'){
+			// if(c == 'getTransaction'){
 				callTime.getTransaction = true;
 				console.log(c+' '+_w+' '+dataTmpAcc.i+'loaded');
-			}
+			// }
 		}
 	},0);
 };
