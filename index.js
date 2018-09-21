@@ -564,7 +564,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 	self.getdata[dataTmpAcc.i][c].remitted = [];
 	self.getdata[dataTmpAcc.i][c].rejected = [];
 	self.getdata[dataTmpAcc.i][c].cancelled = [];
-	self.getdata[dataTmpAcc.i][c].expired = [];
+	self.getdata[dataTmpAcc.i][c]['expired'] = [];
 	self.getdata[dataTmpAcc.i][c].refunded = [];
 	
 	timerGet1.get = 1;
@@ -623,7 +623,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 									}else if(feedback[i].state == 'cancelled'){
 										self.getdata[dataTmpAcc.i][c].cancelled.push(feedback[i]);
 									}else if(feedback[i].state == 'expired'){
-										self.getdata[dataTmpAcc.i][c].expired.push(feedback[i]);
+										self.getdata[dataTmpAcc.i][c]['expired'].push(feedback[i]);
 									}else if(feedback[i].state == 'refunded'){
 										self.getdata[dataTmpAcc.i][c].refunded.push(feedback[i]);
 									}
