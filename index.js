@@ -599,45 +599,45 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 							for (let i = 0; i < feedback.length; i++) {
 								self.getdata[dataTmpAcc.i].allTransaction.push(feedback[i]);
 								// self.getdata[dataTmpAcc.i][c].push(feedback[i]);
-								if(feedback[i].state){
-									console.log('status ke '+i+' : '+feedback[i].state);
-									if(feedback[i].state == 'pending'){
-										self.getdata[dataTmpAcc.i][c].pending.push(feedback[i]);
-									}
-									if(feedback[i].state == 'addressed'){
-										self.getdata[dataTmpAcc.i][c].addressed.push(feedback[i]);
-									}
-									if(feedback[i].state == 'payment_chosen'){
-										self.getdata[dataTmpAcc.i][c].payment_chosen.push(feedback[i]);
-									}
-									if(feedback[i].state == 'confirm_payment'){
-										self.getdata[dataTmpAcc.i][c].confirm_payment.push(feedback[i]);
-									}
-									if(feedback[i].state == 'paid'){
-										self.getdata[dataTmpAcc.i][c].paid.push(feedback[i]);
-									}
-									if(feedback[i].state == 'delivered'){
-										self.getdata[dataTmpAcc.i][c].delivered.push(feedback[i]);
-									}
-									if(feedback[i].state == 'received'){
-										self.getdata[dataTmpAcc.i][c].received.push(feedback[i]);
-									}
-									if(feedback[i].state == 'remitted'){
-										self.getdata[dataTmpAcc.i][c].remitted.push(feedback[i]);
-									}
-									if(feedback[i].state == 'rejected'){
-										self.getdata[dataTmpAcc.i][c].rejected.push(feedback[i]);
-									}
-									if(feedback[i].state == 'cancelled'){
-										self.getdata[dataTmpAcc.i][c].cancelled.push(feedback[i]);
-									}
-									if(feedback[i].state == 'expired'){
-										self.getdata[dataTmpAcc.i][c].expired.push(feedback[i]);
-									}
-									if(feedback[i].state == 'refunded'){
-										self.getdata[dataTmpAcc.i][c].refunded.push(feedback[i]);
-									}
-								}
+								// if(feedback[i].state){
+								// 	console.log('status ke '+i+' : '+feedback[i].state);
+								// 	if(feedback[i].state == 'pending'){
+								// 		self.getdata[dataTmpAcc.i][c].pending.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'addressed'){
+								// 		self.getdata[dataTmpAcc.i][c].addressed.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'payment_chosen'){
+								// 		self.getdata[dataTmpAcc.i][c].payment_chosen.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'confirm_payment'){
+								// 		self.getdata[dataTmpAcc.i][c].confirm_payment.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'paid'){
+								// 		self.getdata[dataTmpAcc.i][c].paid.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'delivered'){
+								// 		self.getdata[dataTmpAcc.i][c].delivered.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'received'){
+								// 		self.getdata[dataTmpAcc.i][c].received.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'remitted'){
+								// 		self.getdata[dataTmpAcc.i][c].remitted.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'rejected'){
+								// 		self.getdata[dataTmpAcc.i][c].rejected.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'cancelled'){
+								// 		self.getdata[dataTmpAcc.i][c].cancelled.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'expired'){
+								// 		self.getdata[dataTmpAcc.i][c].expired.push(feedback[i]);
+								// 	}
+								// 	if(feedback[i].state == 'refunded'){
+								// 		self.getdata[dataTmpAcc.i][c].refunded.push(feedback[i]);
+								// 	}
+								// }
 							};
 
 							timerGet1.status = true;
