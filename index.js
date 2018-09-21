@@ -598,6 +598,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 							for (let i = 0; i < feedback.length; i++) {
 								// self.getdata[dataTmpAcc.i][c].push(feedback[i]);
 								if(feedback[i].state){
+									console.log('status ke '+i+' : '+feedback[i].state);
 									if(feedback[i].state == 'pending'){
 										self.getdata[dataTmpAcc.i][c].pending.push(feedback[i]);
 									}else if(feedback[i].state == 'addressed'){
@@ -624,7 +625,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 										self.getdata[dataTmpAcc.i][c].refunded.push(feedback[i]);
 									}
 								}
-							}
+							};
 
 							timerGet1.status = true;
 							timerGet1.get++;
