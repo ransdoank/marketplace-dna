@@ -153,7 +153,8 @@ function routeCalback(req,res,feedback,where){
 
 let callTime = {
 	getProdukSale : false,
-	getProdukNotSale : false
+	getProdukNotSale : false,
+	getTransaction : false
 };
 
 function generateAllDataMarket(req,res){
@@ -280,6 +281,7 @@ function generateAllDataMarket(req,res){
 
 						callTime.getProdukSale = false;
 						callTime.getProdukNotSale = false;
+						callTime.getTransaction = false;
 
 						if(self.acc.data[id].accountbukalapak){
 							if(self.acc.data[id].accountbukalapak.length > 0){//[self.acc.id[timerGet.lData]].accountbukalapak){
@@ -294,7 +296,7 @@ function generateAllDataMarket(req,res){
 											// callTime.getProdukSale = false;
 											// callTime.getProdukNotSale = false;
 											
-											if(callTime.getProdukSale == false && callTime.getProdukNotSale == false){
+											if(callTime.getProdukSale == false && callTime.getProdukNotSale == false && callTime.getTransaction == false){
 												let dataAccBukalapak = true;
 												self.getdata[dataTmpAcc.i] = {};
 												setTimeout(function dataSaleNotsale(){
@@ -310,7 +312,7 @@ function generateAllDataMarket(req,res){
 														}
 													}
 												},0);
-											}else if(callTime.getProdukSale == false && callTime.getProdukNotSale == true){
+											}else if(callTime.getProdukSale == false && callTime.getProdukNotSale == true && callTime.getTransaction == false){
 												let dataAccBukalapak1 = true;
 												setTimeout(function dataSaleNotsale1(){
 													if(dataAccBukalapak1 == true){
@@ -325,7 +327,22 @@ function generateAllDataMarket(req,res){
 														}
 													}
 												},0);
-											}else if(callTime.getProdukSale == true && callTime.getProdukNotSale == true){
+											}else if(callTime.getProdukSale == true && callTime.getProdukNotSale == true && callTime.getTransaction == true){
+												let dataAccBukalapak1 = true;
+												setTimeout(function dataSaleNotsale1(){
+													if(dataAccBukalapak1 == true){
+														dataAccBukalapak1 = false;
+														getProdukSaleNotsale(dataTmpAcc,'getProdukSale');
+														setTimeout(dataSaleNotsale1,0);
+													}else{
+														if(callTime.getProdukSale == true){
+															setTimeout(getDataAccoun,0);
+														}else{
+															setTimeout(dataSaleNotsale1,0);
+														}
+													}
+												},0);
+											}else if(callTime.getProdukSale == true && callTime.getProdukNotSale == true && callTime.getTransaction == false){
 												timerGet.lData++;
 												callTime.getProdukSale = false;
 												callTime.getProdukNotSale = false;
@@ -483,7 +500,7 @@ function generateAllDataMarket(req,res){
 						
 					}else{
 						console.log('finis all load');
-						viewDataCallbcak(self.getdata,req,res);
+						viewDataCallbcak(self,req,res);
 					}
 				},0);
 			}else{
