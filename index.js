@@ -8,8 +8,34 @@ let request = require('request');
 let path = require('path');
 let fs = require('fs');
 // let useragent = require('express-useragent');
+// db
+let admin = require('firebase-admin');
+let serviceAccount = '';// require(__dirname +'/db/database-pos-firebase-adminsdk-kxrn0-be13a9eb0c.json');
+let databaseURL = '';// https://database-pos.firebaseio.com devinvent-28bf9.firebase.com
 
-let PORT = 8000;
+let db = '';
+
+// create redis
+var redis = require('redis');
+var clientRedis = redis.createClient(); // this creates a new clientRedis
+// clientRedis = redis.createClient(port, host);
+let self = {};
+let redisOption = {
+	key:'',
+	val:'',
+	status:''
+};
+let timerGet = {
+	timeC : 0,
+	status : false,
+	lData : 0
+}
+let timerGet1 = {
+	timeC : 0,
+	status : false,
+	lData : 0
+}
+let PORT = 5000;
 
 // Express & Middleware
 let app = express();
@@ -29,12 +55,23 @@ exports._setOption = function(params){
 	options.key = params.key;
 	options.cert = params.cert;
 	options.ca = params.ca;
-  console.log('options set');
 };
 
 exports._setDirname = function(a){
 	dirReplace = a;
-  	console.log('dirname set '+dirReplace);
+};
+
+exports._setRedisOption = function(b){
+	redisOption.key = b.key;
+	redisOption.val = b.val;
+	redisOption.status = b.status;
+  	console.log('dirname set '+b);
+};
+
+exports._setDataBase = function(c){
+	serviceAccount = require(c.serviceAcc);
+	databaseURL = c.databaseURL;
+  	console.log('dirname set '+c);
 };
 
 
@@ -48,12 +85,34 @@ let botStatusServer = true;
 
 //set active listener
 exports._setactivePort = function(){
+	// db setting
+	admin.initializeApp({
+		credential: admin.credential.cert(serviceAccount),
+		databaseURL: databaseURL
+	});
+
+	db = admin.database();
+
+	let test = db.ref("api/checkBot/facebook");
+	self.testData = test;
+
+	// redis
+	clientRedis.on('connect', function() {
+		console.log('Redis clientRedis connected');
+	});
+
+	clientRedis.on('error', function (err) {
+		console.log('Something went wrong ' + err);
+	});
+
 	server = https.createServer(options, app);
 	io = require('socket.io')(server);
 	console.log('dirname set '+dirReplace);
 	server.listen(PORT, function(req,res){
 		console.log(" SERVER listening @ port:",PORT);
 	});
+
+	rolemembershipModify('','MsaXytEmXDNMHhrcwnYpoPJ3Pdy1');
 };
 
 //GET Routes
@@ -64,20 +123,25 @@ app.get('/',function(req,res){
 	viewDataCallbcak('marketplace-dna work',req,res);
 });
 
-let self = {};
-let timerGet = {
-	timeC : 0,
-	status : false,
-	lData : 0
-}
-let timerGet1 = {
-	timeC : 0,
-	status : false,
-	lData : 0
-}
+
 
 function viewDataCallbcak(data,req,res){
-	res.send(data);
+	self.updateRedis = { call : false, status : ''};
+	timerGet1.get = 1;
+	timerGet1.status = true;
+	setTimeout(function getData(){
+		if(timerGet1.get > 0){
+			if(timerGet1.status == true && self.updateRedis.call == false){
+				updateRedistCron(self.data);
+				timerGet1.status = false;
+				setTimeout(getData, 0);
+			}else{
+				setTimeout(getData, 0);
+			}
+		}else{
+			res.send(self);//data);	
+		}
+	},0);
 };
 
 app.get('/marketPlaceJobsApi', function(req,res){
@@ -89,7 +153,8 @@ app.get('/marketPlaceJobsApi', function(req,res){
   		met: self._paramsData.met
   	});
 	console.log('marketPlaceJobsApi :: ');
-  	getData(req,res,'get',self._paramsData.uri,dataAwal,'allData');
+	  getData(req,res,'get',self._paramsData.uri,dataAwal,'allData');
+	  
   }else{
 	console.log('err marketPlaceJobsApi :: ');
 	viewDataCallbcak('marketplace-dna work',req,res);
@@ -98,48 +163,70 @@ app.get('/marketPlaceJobsApi', function(req,res){
 
 function getData(req,res,met,baseUrl,dataPost,where){
 	if(met == 'get'){
-		request.get({
-			headers: {'content-type': 'application/x-www-form-urlencoded'},
-			url: baseUrl+'?'+dataPost,
-			body: dataPost
-		}, function(error, response, body){
-			if(!error){
-				let _returns = response.body;
-				let feedback = {};
-				timerGet.timeC = 1;
-				timerGet.status = true;
-				setTimeout(function allData(){
-					if(timerGet.timeC > 0){
-						if(timerGet.status == true){
-							if(_returns){
-								feedback = JSON.parse(_returns);
-								timerGet.timeC = 0;
-								timerGet.timeC = false;
-							}else{
-								timerGet.timeC++;
-							}
-							setTimeout(allData,0);
-						}else{
-							setTimeout(allData,0);
-						}
-					}else{
-						console.log('getData '+feedback.existdbRedistCron)
-						routeCalback(req,res,feedback,where);
-					}
-				},0);
+		self.redis = { key:redisOption.key, val:redisOption.val, status:redisOption.status};
+		let checkExist = false;
+		let dataTmpRedis = '';
+		clientRedis.get(self.redis.key, function (error, result) {
+			if (result) {
+				console.log('GET result -> exist');
+					dataTmpRedis = JSON.parse(result);
+					checkExist = true;
+					self.redis.status = 'update';
 			}else{
-				console.log('err getData -> '+where+' :: '+error);
-				viewDataCallbcak('error',req,res);
+				console.log('GET result -> not exist');
+				self.redis.status = 'create';
 			}
+			if(checkExist == true){
+				console.log('GET result checkExist -> exist');
+				console.log(where);
+				routeCalback(req,res,dataTmpRedis,where);
+			}else{
+				console.log('GET result checkExist -> not exist');
+				request.get({
+					headers: {'content-type': 'application/x-www-form-urlencoded'},
+					url: baseUrl+'?'+dataPost,
+					body: dataPost
+				}, function(error, response, body){
+					if(!error){
+						let _returns = response.body;
+						let feedback = {};
+						timerGet.timeC = 1;
+						timerGet.status = true;
+						setTimeout(function allData(){
+							if(timerGet.timeC > 0){
+								if(timerGet.status == true){
+									if(_returns){
+										feedback = JSON.parse(_returns);
+										timerGet.timeC = 0;
+										timerGet.timeC = false;
+									}else{
+										timerGet.timeC++;
+									}
+									setTimeout(allData,0);
+								}else{
+									setTimeout(allData,0);
+								}
+							}else{
+								console.log('getData '+feedback.existdbRedistCron)
+								routeCalback(req,res,feedback.self_data,where);
+							}
+						},0);
+					}else{
+						console.log('err getData -> '+where+' :: '+error);
+						viewDataCallbcak('error',req,res);
+					}
+				});
+			}			
 		});
 	}
 };
 
 function routeCalback(req,res,feedback,where){
 	if(where == 'allData'){
-		if(feedback.self_data && feedback.existdbRedistCron){
-			self.data = feedback.self_data;
-			self.statusRedis = feedback.existdbRedistCron;
+		if(feedback){
+			self.data = feedback;
+			self.redis.val = feedback;
+			// self.statusRedis = feedback.existdbRedistCron;
 			generateAllDataMarket(req,res);
 		}else{
 			console.log('err routeCalback allData')
@@ -196,32 +283,41 @@ function generateAllDataMarket(req,res){
 					}
 					// produk data default extract
 					if(val.produk){
-						self.acc.data[prop].produk = {};
+						let tmpCheckExistProduk = [];
 						objectForeach(val.produk, function (val1, prop1, obj1) {
 							if(val1){
 								objectForeach(val1, function (val2, prop2, obj2) {
 									if(val2.marketPlace){
 										self.acc.data[prop].produk[prop2] = val2;
+										tmpCheckExistProduk.push({[prop2] : val2});
 									}
 								});
 							}
 						});
+						if(tmpCheckExistProduk.length == 0){
+							self.data.all[prop].produk = {};
+							self.data.marketPlaceUser[prop].produk = {};
+							self.acc.data[prop].produk = {};
+						}
 					}else{
 						self.acc.data[prop].produk = {};
-						console.log('tidak ada produk '+prop)
 					}
 					// kategori data default extract
 					if(val.kategoriProduk){
 						self.acc.data[prop].kategoriProduk = {};
+						let tmpCheckExistKtg = [];
+						console.log('ada ktg')
 						objectForeach(val.kategoriProduk, function (val1, prop1, obj1) {
 							if(val1){
-								objectForeach(val1, function (val2, prop2, obj2) {
-									if(val2.marketPlace){
-										self.acc.data[prop].kategoriProduk[prop2] = val2;
-									}
-								});
+								self.acc.data[prop].kategoriProduk[prop1] = val1;
+								tmpCheckExistKtg.push({[prop1] : val1});
 							}
 						});
+						if(tmpCheckExistKtg.length == 0){
+							self.data.all[prop].kategoriProduk = {};
+							self.data.marketPlaceUser[prop].kategoriProduk = {};
+							self.acc.data[prop].kategoriProduk = {};
+						}
 					}else{
 						self.acc.data[prop].kategoriProduk = {};
 						console.log('tidak ada kategoriProduk '+prop)
@@ -269,16 +365,8 @@ function generateAllDataMarket(req,res){
 				self.getdata = {};
 				setTimeout(function allData(){
 					if(self.acc.id[timerGet.timeC]){
-						let id = self.acc.id[timerGet.timeC];
-						// self.getdata.push({
-						// 	id: id,
-						// 	data0: self.acc.data[id].accountbukalapak,
-						// 	data1: self.acc.data[id]['accountbukalapak']//,
-						// 	// data3: self.acc.data.id.accountbukalapak
-						// });
-						// timerGet.timeC++;
-						// setTimeout(allData,0);
 
+						let id = self.acc.id[timerGet.timeC];
 						callTime.getProdukSale = false;
 						callTime.getProdukNotSale = false;
 						callTime.getTransaction = false;
@@ -295,51 +383,52 @@ function generateAllDataMarket(req,res){
 	
 											// callTime.getProdukSale = false;
 											// callTime.getProdukNotSale = false;
+											// console.log('status : '+callTime.getProdukSale+' : '+callTime.getProdukNotSale+' :'+callTime.getTransaction);
 											
 											if(callTime.getProdukSale == false && callTime.getProdukNotSale == false && callTime.getTransaction == false){
 												let dataAccBukalapak = true;
 												self.getdata[dataTmpAcc.i] = {};
-												setTimeout(function dataSaleNotsale(){
+												setTimeout(function dataSale(){
 													if(dataAccBukalapak == true){
 														dataAccBukalapak = false;
-														getProdukSaleNotsale(dataTmpAcc,'getProdukNotSale','bukalapak');
-														setTimeout(dataSaleNotsale,0);
+														getProdukSaleNotsale(dataTmpAcc,'getProdukNotSale','bukalapak',id);
+														setTimeout(dataSale,0);
 													}else{
 														if(callTime.getProdukNotSale == true){
 															setTimeout(getDataAccoun,0);
 														}else{
-															setTimeout(dataSaleNotsale,0);
+															setTimeout(dataSale,0);
 														}
 													}
 												},0);
 											}else if(callTime.getProdukSale == false && callTime.getProdukNotSale == true && callTime.getTransaction == false){
 												let dataAccBukalapak1 = true;
-												setTimeout(function dataSaleNotsale1(){
+												setTimeout(function dataSale(){
 													if(dataAccBukalapak1 == true){
 														dataAccBukalapak1 = false;
-														getProdukSaleNotsale(dataTmpAcc,'getProdukSale','bukalapak');
-														setTimeout(dataSaleNotsale1,0);
+														getProdukSaleNotsale(dataTmpAcc,'getProdukSale','bukalapak',id);
+														setTimeout(dataSale,0);
 													}else{
 														if(callTime.getProdukSale == true){
 															setTimeout(getDataAccoun,0);
 														}else{
-															setTimeout(dataSaleNotsale1,0);
+															setTimeout(dataSale,0);
 														}
 													}
 												},0);
 											}else if(callTime.getProdukSale == true && callTime.getProdukNotSale == true && callTime.getTransaction == false){
 												let dataAccBukalapak2 = true;
 												self.getdata[dataTmpAcc.i].getTransaction = {};
-												setTimeout(function dataSaleNotsale1(){
+												setTimeout(function dataSale(){
 													if(dataAccBukalapak2 == true){
 														dataAccBukalapak2 = false;
-														getTransactionSellerFailedSuccessCustomer(dataTmpAcc,'getTransaction','bukalapak');
-														setTimeout(dataSaleNotsale1,0);
+														getTransactionSellerFailedSuccessCustomer(dataTmpAcc,'getTransaction','bukalapak',id);
+														setTimeout(dataSale,0);
 													}else{
-														if(callTime.getProdukSale == true){
+														if(callTime.getTransaction == true){
 															setTimeout(getDataAccoun,0);
 														}else{
-															setTimeout(dataSaleNotsale1,0);
+															setTimeout(dataSale,0);
 														}
 													}
 												},0);
@@ -347,7 +436,7 @@ function generateAllDataMarket(req,res){
 												timerGet.lData++;
 												callTime.getProdukSale = false;
 												callTime.getProdukNotSale = false;
-												callTime.getTransaction == false;
+												callTime.getTransaction = false;
 												setTimeout(getDataAccoun,0);
 											}
 										}else{
@@ -371,59 +460,7 @@ function generateAllDataMarket(req,res){
 							timerGet.status = false;
 							timerGet.timeC++;
 							setTimeout(allData,0);
-						}
-						/*if((timerGet.lData+1) > 0 && timerGet.lData < self.acc.id.length){
-							let dataAccount  = self.acc.data[self.acc.id[timerGet.lData]].accountbukalapak;
-							// if(dataAccount && dataAccount.length > 0){
-								
-							setTimeout(function allData1(){
-								if(timerGet.lData != self.acc.id.length){
-									// if()
-									if(timerGet.status == true){
-										timerGet.status = false;
-										let dataPost = qs.stringify({
-											pass: self._paramsData.pass,
-											met: self._paramsData.met,
-											_w:'test'
-										});
-										request.get({
-											headers: {'content-type': 'application/x-www-form-urlencoded'},
-											url: self._paramsData.uri+'?'+dataPost,
-											body: dataPost
-										}, function(error, response, body){
-											if(!error && response.body){
-												let _returns = response.body;
-												self.getdata.push(_returns); 
-												// let feedback = JSON.parse(_returns);
-												console.log(_returns);
-												// timerGet.timeC = 0;
-												if(dataAccount < )
-												timerGet.lData++;
-												timerGet.status = false;
-												// routeCalback(req,res,feedback,where);
-											}else{
-												console.log('err -> '+where+' :: '+error);
-												// viewDataCallbcak('error',req,res)
-												timerGet.timeC = 0;
-												timerGet.status = false;
-											}
-										});
-										// timerGet.timeC++;
-										setTimeout(allData, 0);
-									}else{
-										// timerGet.timeC++;
-										setTimeout(allData1, 0);
-									}
-								}else{
-									timerGet.timeC = 0;
-									setTimeout(allData, 0);
-								}
-							},0);
-							
-							// }
-						}*/
-
-						
+						}						
 					}else{
 						console.log('finis all load');
 						viewDataCallbcak(self,req,res);
@@ -481,23 +518,22 @@ function replaceText(obj){
 };
 
 
-function getProdukSaleNotsale(dataTmpAcc,c,_w){
-	self.getdata[dataTmpAcc.i][c] = [];
-	
+function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
+	// self.getdata[dataTmpAcc.i][c] = [];
+	let allData = [];
 	timerGet1.get = 1;
 	timerGet1.status = true;
 	setTimeout(function getData(){
 		if(timerGet1.get > 0){
 			if(timerGet1.status == true){
-
 				let dataPost = qs.stringify({
 					pass: self._paramsData.pass,
 					met: self._paramsData.met,
 					u : dataTmpAcc.i,
 					p : dataTmpAcc.t,
-					c : c,//'condition',
+					c : c,
 					d : timerGet1.get,
-					_w : _w//'marketplaceName'
+					_w : _w
 				});
 				request.get({
 					headers: {'content-type': 'application/x-www-form-urlencoded'},
@@ -516,7 +552,7 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w){
 
 						if(feedback.length > 0 && feedback.length <= 50){
 							for (let i = 0; i < feedback.length; i++) {
-								self.getdata[dataTmpAcc.i][c].push(feedback[i]);
+								allData.push(feedback[i]);
 							}
 
 							timerGet1.status = true;
@@ -540,20 +576,20 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w){
 			}
 		}else{
 			if(c == 'getProdukSale'){
-				callTime.getProdukSale = true;
-				console.log(c+' '+_w+' '+dataTmpAcc.i+'loaded');
+				// callTime.getProdukSale = true;
+				generateProduk('produk',dataTmpAcc.i,c,_w,allData,UID);
 			}
 			if(c == 'getProdukNotSale'){
-				console.log(c+' '+_w+' '+dataTmpAcc.i+'loaded');
-				callTime.getProdukNotSale = true;
+				// callTime.getProdukNotSale = true;
+				generateProduk('produk',dataTmpAcc.i,c,_w,allData,UID);
 			}
 
 		}
 	},0);
 };
-function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
+function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w,UID){
 	// self.getdata[dataTmpAcc.i][c] = {};
-	self.getdata[dataTmpAcc.i].allTransaction = [];
+	self.getdata[dataTmpAcc.i][c].allTransaction = [];
 	self.getdata[dataTmpAcc.i][c].pending = [];
 	self.getdata[dataTmpAcc.i][c].addressed = [];
 	self.getdata[dataTmpAcc.i][c].payment_chosen = [];
@@ -564,7 +600,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 	self.getdata[dataTmpAcc.i][c].remitted = [];
 	self.getdata[dataTmpAcc.i][c].rejected = [];
 	self.getdata[dataTmpAcc.i][c].cancelled = [];
-	self.getdata[dataTmpAcc.i][c]['expired'] = [];
+	self.getdata[dataTmpAcc.i][c].expired = [];
 	self.getdata[dataTmpAcc.i][c].refunded = [];
 	
 	timerGet1.get = 1;
@@ -572,7 +608,6 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 	setTimeout(function getData(){
 		if(timerGet1.get > 0){
 			if(timerGet1.status == true){
-
 				let dataPost = qs.stringify({
 					pass: self._paramsData.pass,
 					met: self._paramsData.met,
@@ -598,10 +633,8 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 
 						if(feedback.length > 0 && feedback.length <= 50){
 							for (let i = 0; i < feedback.length; i++) {
-								self.getdata[dataTmpAcc.i].allTransaction.push(feedback[i]);
-								// self.getdata[dataTmpAcc.i][c].push(feedback[i]);
+								self.getdata[dataTmpAcc.i][c].allTransaction.push(feedback[i]);
 								if(feedback[i].state){
-									console.log('status ke '+i+' : '+feedback[i].state);
 									if(feedback[i].state == 'pending'){
 										self.getdata[dataTmpAcc.i][c].pending.push(feedback[i]);
 									}else if(feedback[i].state == 'addressed'){
@@ -623,7 +656,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 									}else if(feedback[i].state == 'cancelled'){
 										self.getdata[dataTmpAcc.i][c].cancelled.push(feedback[i]);
 									}else if(feedback[i].state == 'expired'){
-										self.getdata[dataTmpAcc.i][c]['expired'].push(feedback[i]);
+										self.getdata[dataTmpAcc.i][c].expired.push(feedback[i]);
 									}else if(feedback[i].state == 'refunded'){
 										self.getdata[dataTmpAcc.i][c].refunded.push(feedback[i]);
 									}
@@ -650,87 +683,65 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 				setTimeout(getData, 0);
 			}
 		}else{
-			// if(c == 'getTransaction'){
+			if(c == 'getTransaction'){
 				callTime.getTransaction = true;
 				console.log(c+' '+_w+' '+dataTmpAcc.i+'loaded');
-			// }
+			}
 		}
 	},0);
 };
 
-
-/*self.generateProduk = function(a){
-	console.log('self.dataConvert',self.dataConvert,' self.accountMarket', self.accountMarket)
-	let allData = [];
-	if(a == 'produk'){
-		self.dataPostProduk.list = [];
-		allData = self.dataConvert.allData;
-	}else if(a == 'transaksi'){
-		self.regulasiData.dataList = [];
-		allData = self.regulasiData.allData;
-	}
+// generate data produk
+function generateProduk(a,id,c,_w,allData,UID){
 	let feedback = [];
-	let dataPush = 0;
-	let idBrend = '';
+	let brandGet = {
+		idBrend : '',
+		email : '',
+		username : ''
+	};
 	let idsuplier = '';
 	let jenis = '';
-
 	let getProfile = true;
-	if(self.default.brand){
-		angular.forEach(self.default.brand,function(v,k){
+	let timeLokal = 0;
+	let tOf = false;
+
+	if(a == 'produk'){
+		self.getdata[id][c] = [];
+		self.getdata[id].dataBrand = [];
+	}else if(a == 'transaksi'){
+		// self.regulasiData.dataList = [];
+		// allData = self.regulasiData.allData;
+	}
+
+	if(self.acc.data[UID].brand){
+		objectForeach(self.acc.data[UID].brand, function (v, k, obj) {
 			if(v.marketPlace){
-				if(v.marketPlace.id == self.accountMarket.id && v.marketPlace.marketPlace == self.aSelectMarket.name.toLowerCase()){
+				if(v.marketPlace.id == id && v.marketPlace.marketPlace == _w){
 					getProfile = false;
-					idBrend = k;
+					brandGet.idBrend = k;
+					brandGet.email = v.marketPlace.email;
+					brandGet.username = v.marketPlace.username;
 					idsuplier = '';
 					jenis = 'stok_sendiri';
+					self.getdata[id].dataBrand.push({[k]:v});
 				}
 			}
 		});
 	}
-	if(getProfile == true){
-		self.timerGet.get = 1;
-		self.timerGet.status = true;
-		$timeout(function autoPutProduk(){
-			if(self.timerGet.get > 0){
-				if(self.timerGet.status == true){
-					self.timerGet.status = false;
-					self.generateNewProfile(self.accountMarket.id,a);
-					$timeout(autoPutProduk, 0);
-				}else{
-					$timeout(autoPutProduk, 0);
-				}
-			}else{
-				self.generateProduk(a);
+	
+	if(getProfile == false){
+		timerGet1.get = 1;
+		timerGet1.status = true;
 
-			}
-		},0);
-	}else{
-		if(a == 'produk'){
-			self.progressBar.all = allData.length;
-		}else if(a == 'transaksi'){
-			self.progressBar.all = allData.length;
-		}
-
-		self.timerGet.get = 1;
-		self.timerGet.status = true;
-		let timeLokal = 0;
-		$timeout(function prodDelay(){
-			if(self.timerGet.get > 0){
-				if(self.timerGet.status == true && timeLokal == 0){
+		setTimeout(function prodDelay(){
+			if(timerGet1.get > 0){
+				if(timerGet1.status == true && timeLokal == 0){
 					timeLokal++;
-					self.timerGet.status = false;
-					let k = self.timerGet.get-1;
+					timerGet1.status = false;
+					let k = timerGet1.get-1;
 					let v = allData[k];
 
 					if(v){
-						if(a == 'produk'){
-							self.progressBar.data = v.name;
-							self.changeProgress(self.timerGet.get);
-						}else if(a == 'transaksi'){
-							self.progressBar.data = 'load produk '+v.name;
-							self.changeProgress(self.timerGet.get);
-						}
 						if(v.id){
 							let jenisProduct = '';
 							let grosir = [];
@@ -738,6 +749,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 							let varianData = [];
 							let varianDataTmp = [];
 							let desacVp = '';
+
 							if(v.desc){
 								desacVp = v.desc;
 							}
@@ -770,7 +782,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 							}
 							if(v.product_sku){
 								if(v.product_sku.length > 0 ){
-									angular.forEach(v.product_sku,function(vPprodSku,kPprodSku){
+									objectForeach(v.product_sku, function (vPprodSku, kPprodSku, obj) {
 										varianData.push({
 											katalog: vPprodSku.images,
 											sku: v.id.toUpperCase()+'-V'+kPprodSku+'-'+vPprodSku.sku_name,
@@ -786,7 +798,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 												statusStok: "stok_tersedia",
 												stokIn: vPprodSku.stock,
 												stokOut: 0,
-												updateID: UlogID,
+												updateID: UID,
 											}]
 										});
 										varianDataTmp.push({
@@ -810,7 +822,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 											statusStok: "stok_tersedia",
 											stokIn: v.stock,
 											stokOut: 0,
-											updateID: UlogID,
+											updateID: UID,
 										}]
 									});
 									varianDataTmp.push({
@@ -820,13 +832,12 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 								}
 							}
 							if(varianData.length > 0){
-								dataPush++;
 								feedback.push({
 									berat: v.weight,
 									grosir: grosir,
-									idBrend: idBrend,
-									idParentUser : UlogEM,
-									idStaffInput: UlogID,
+									idBrend: brandGet.idBrend,
+									idParentUser : UID,
+									idStaffInput: UID,
 									idsuplier: idsuplier,
 									jenis: jenis,
 									jenisProduct : jenisProduct,
@@ -836,82 +847,392 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w){
 									status: status,
 									diskon: 0,
 									marketPlace:{
-										idSeller:self.accountMarket.id,
-										username:self.accountMarket.username,
-										email:self.accountMarket.email,
+										idSeller:id,
+										username:brandGet.username,
+										email:brandGet.email,
 										id_produk:v.id,
 										varian:varianDataTmp,
-										name: self.aSelectMarket.name.toLowerCase()
+										name: _w
 									},
 									diskonType: '',
 									varian: varianData
 								});
 							}
 						}
-						self.timerGet.get++;
+						timerGet1.get++;
 					}else{
-						self.timerGet.get = 0;
+						timerGet1.get = 0;
 					}
-					$timeout(prodDelay, 0);
+					setTimeout(prodDelay, 0);
 				}else{
-					if(allData[self.timerGet.get-1]){
+					if(allData[timerGet1.get-1]){
 						if(timeLokal < 100){
 							timeLokal++;
 						}else{
-							self.timerGet.status = true;
+							timerGet1.status = true;
 							timeLokal = 0;
 						}
 					}else{
-						self.timerGet.get = 0;
+						timerGet1.get = 0;
 					}
 					
-					$timeout(prodDelay, 0);
+					setTimeout(prodDelay, 0);
 				}
 			}else{
 				if(feedback.length > 0){
 					if(a == 'produk'){
 						//check produk exist on database
-						let newProduk = [];
-						let tOf = false;
-						dataPush = 0;
-						angular.forEach(feedback,function(v,k){
+						objectForeach(feedback, function (v, k, obj) {
 							if(v.marketPlace.id_produk){
 								tOf = false;
-								if(self.default.produkList.length > 0){
-									angular.forEach(self.default.produkList,function(v1,k1){
+								if(self.acc.data[UID]['produkImport'+_w].length > 0){
+									objectForeach(self.acc.data[UID]['produkImport'+_w], function (v1, k, obj) {
 										if(v1.id_produk == v.marketPlace.id_produk){
 											tOf = true;
-											console.log('ada yg sama')
 										}
 									});
 								}
 								if(tOf == false){
-									console.log('tidak ada yg sama')
-									dataPush++;
-									newProduk.push(v);
+									self.getdata[id][c].push(v);
 								}
 							}
 						});
 						
-						self.dataPostProduk.lengthData = dataPush;
-						self.dataPostProduk.list = newProduk;
-
-						if(newProduk.length > 0 ){
-							self.notifyError2('Data baru "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+' loaded!','success');
+						if(self.getdata[id][c].length > 0 ){
+							// console.log('ada data baru '+id+' di '+_w+' loaded!');
 						}else{
-							self.notifyError2('Tidak ada data baru "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+'!','warn');
+							// console.log('Tidak ada data baru '+id+' di '+_w+' loaded!');
 						}
 					}else if(a == 'transaksi'){
 						self.regulasiData.dataList = feedback;
 					}
 				}else{
 					if(a == 'produk'){
-						self.notifyError2('Anda tidak mempunyai data "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+'!','error');
+						console.log(id+' tidak mempunyai data produk di '+_w+'!');
 					}else if(a == 'transaksi'){
 						self.regulasiData.dataList = feedback;
 					}
 				}
+
+				if(c == 'getProdukSale'){
+					// console.log(c+' '+id+' loaded');
+					checkKtg(self.getdata[id][c],a,UID,c);
+					// callTime.getProdukSale = true;
+				}
+				if(c == 'getProdukNotSale'){
+					// console.log(c+' '+id+' loaded');
+					// callTime.getProdukNotSale = true;
+					checkKtg(self.getdata[id][c],a,UID,c);
+				}
 			}
 		},0);            
+	}else{
+		console.log('err get brand '+id);
 	}
-};*/
+};
+
+// check kategori
+function checkKtg(data,where,UID,c){
+	let ktg = [];
+	let ktgArr = [];
+	let ktgUpload = [];
+	let uniqueNames =  [];
+	let tmpCheckExistKtg = [];
+	if(data.length > 0){
+		objectForeach(data, function (v, k, obj) {
+			if(v.kategori){
+				ktg.push(v.kategori);
+			}
+		});
+	}
+	if(self.acc.data[UID].kategoriProduk){
+		objectForeach(self.acc.data[UID].kategoriProduk, function (v, k, obj) {
+			if(v.kategori){
+				ktgArr.push(v.kategori.toLowerCase());
+				tmpCheckExistKtg.push(v.kategori.toLowerCase());
+			}
+		});
+	}
+
+	uniqueNames = unique_array(ktg);
+	if(uniqueNames.length > 0){
+		for(var i = 0; i < uniqueNames.length; i++){
+			// if(ktgArr.length > 0){
+			if(ktgArr.indexOf(uniqueNames[i].toLowerCase()) === -1){
+				ktgUpload.push({
+					kategori: uniqueNames[i]
+				});
+			}
+		};
+	}
+	
+	if(ktgUpload.length > 0 ){
+		console.log('upload ktg')
+		timerGet1.get = 1;
+		timerGet1.status = true;
+		setTimeout(function getData(){
+			if(timerGet1.get > 0){
+				if(timerGet1.status == true && ktgUpload[timerGet1.get-1]){
+					let dataConverUp = JSON.stringify(ktgUpload[timerGet1.get-1]);
+					let dataPost = qs.stringify({
+						pass: self._paramsData.pass,
+						met: self._paramsData.met,
+						u : UID,
+						p : '',
+						c : 'new',
+						d : dataConverUp,
+						_w : 'importKategori'
+					});
+					request.get({
+						headers: {'content-type': 'application/json'},//x-www-form-urlencoded'},
+						url: self._paramsData.uri+'2?'+dataPost,
+						body: dataPost
+					}, function(error, response, body){
+						if(!error && response.body){
+							let _returns =  response.body;
+							if(_returns && (timerGet1.get-1) < ktgUpload.length){
+								self.acc.data[UID].kategoriProduk[_returns] = ktgUpload[timerGet1.get-1];
+								self.data.all[UID].kategoriProduk[_returns] = ktgUpload[timerGet1.get-1];
+								self.data.marketPlaceUser[UID].kategoriProduk[_returns] = ktgUpload[timerGet1.get-1];
+								
+								tmpCheckExistKtg.push(ktgUpload[timerGet1.get-1].kategori);
+								timerGet1.status = true;
+								timerGet1.get++;
+
+							}else{
+								timerGet1.status = false;
+								timerGet1.get = 0;
+							}
+						}else{
+							timerGet1.status = false;
+							timerGet1.get = 0;
+						}
+					});
+					timerGet1.status = false;
+					setTimeout(getData, 0);
+				}else{
+					 if(!ktgUpload[timerGet1.get-1]){
+						timerGet1.status = false;
+						timerGet1.get = 0;
+						setTimeout(getData, 0);
+					}
+					setTimeout(getData, 0);
+				}
+			}else{
+				saveContinue(data,where,UID,c);
+			}
+		},0);
+	}else{
+		saveContinue(data,where,UID,c);
+	}
+};
+
+
+// function unique
+function unique_array(arr) {
+	// if (!Array.isArray(arr)) {
+	//   throw new TypeError('array-unique expects an array.');
+	// }
+  
+	var len = arr.length;
+	var i = -1;
+  
+	while (i++ < len) {
+	  var j = i + 1;
+  
+	  for (; j < arr.length; ++j) {
+		if (arr[i] === arr[j]) {
+		  arr.splice(j--, 1);
+		}
+	  }
+	}
+	return arr;
+};
+
+function updateRedistCron(data){
+	let checkExist = false;
+	clientRedis.get(self.redis.key, function (error, result) {
+		if (result) {
+			console.log('GET result -> exist');
+				// self.redis.val = JSON.parse(result);
+				// self.data = JSON.parse(result);
+				checkExist = true;
+		}else{
+			console.log('GET result -> not exist');
+		}
+		if(checkExist == false){
+			if(self.redis.status == 'create'){
+				console.log('create redis');
+				clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);//JSON.stringify(self.redis.val), redis.print);
+				self.redis.status = 'update';
+				self.redis.val = data;
+			}
+		}else{
+			if(self.redis.status == 'update'){
+				console.log('update redis');
+				clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);
+				self.redis.val = data;
+			}
+		}
+	});
+	timerGet1.get = 0;
+}
+
+
+
+function saveContinue(data,where,UID,c){
+	if(data.length > 0){
+		let dataCount = {
+			promo:0,
+			reguler:0
+		}
+
+		objectForeach(data, function (v, k, obj) {
+			if(v.kategori){
+				// ktg.push(v.kategori);
+				if(self.acc.data[UID].kategoriProduk){
+					objectForeach(self.acc.data[UID].kategoriProduk, function (v1, k1, obj1) {
+						if(v1.kategori.toLowerCase() == v.kategori.toLowerCase()){
+							// console.log('prod sama'+v.kategori+' :: '+k1)
+							v.kategori = k1;
+						}
+					});
+				}
+			}
+		});
+	// }
+		
+		objectForeach(self.data.marketPlaceUser[UID].produk,function(v,k,obj){
+			if(v.kategori){
+				if(v.kategori == '-L123456-KategoriPromo'){
+					dataCount.promo++;
+				}else{
+					dataCount.reguler++;
+				}
+
+			}
+		});
+		
+		let CountKtg = JSON.stringify({promo:dataCount.promo,reguler:dataCount.reguler});
+
+	// auto save data produk
+	self.produkPost = [];
+	timerGet1.get = 1;
+	timerGet1.status = true;
+	setTimeout(function getData(){
+		if(timerGet1.get > 0){
+			if(timerGet1.status == true && data[timerGet1.get-1]){
+				let dataConverUp = JSON.stringify(data[timerGet1.get-1]);
+				let dataPost = qs.stringify({
+					pass: self._paramsData.pass,
+					met: self._paramsData.met,
+					u : UID,
+					p : CountKtg,
+					c : 'newProduk',
+					d : dataConverUp,
+					_w : 'import_produk'
+				});
+				request.get({
+					headers: {'content-type': 'application/json'},//x-www-form-urlencoded'},
+					url: self._paramsData.uri+'2?'+dataPost,
+					body: dataPost
+				}, function(error, response, body){
+					if(!error && response.body){
+						let _returns =  response.body;
+						if(_returns && (timerGet1.get-1) < data.length){
+							self.produkPost.push({data:data[timerGet1.get-1],return:_returns});
+							// console.log('feed produk '+_returns);
+							// self.acc.data[UID].kategoriProduk[_returns] = data[timerGet1.get-1];
+							// self.data.all[UID].kategoriProduk[_returns] = data[timerGet1.get-1];
+							// self.data.marketPlaceUser[UID].kategoriProduk[_returns] = data[timerGet1.get-1];
+							
+							// tmpCheckExistKtg.push(data[timerGet1.get-1].kategori);
+							timerGet1.status = true;
+							timerGet1.get++;
+
+						}else{
+							timerGet1.status = false;
+							timerGet1.get = 0;
+						}
+					}else{
+						timerGet1.status = false;
+						timerGet1.get = 0;
+					}
+				});
+				timerGet1.status = false;
+				setTimeout(getData, 0);
+			}else{
+				if(!data[timerGet1.get-1]){
+					timerGet1.status = false;
+					timerGet1.get = 0;
+					setTimeout(getData, 0);
+				}
+				setTimeout(getData, 0);
+			}
+		}else{
+			// saveContinue(data,where,UID,c);
+			if(c == 'getProdukSale'){
+				callTime.getProdukSale = true;
+			}
+			if(c == 'getProdukNotSale'){
+				callTime.getProdukNotSale = true;
+			}
+		}
+	},0);
+	
+	}else{
+		if(c == 'getProdukSale'){
+			callTime.getProdukSale = true;
+		}
+		if(c == 'getProdukNotSale'){
+			callTime.getProdukNotSale = true;
+		}
+	}
+};
+
+self.produkPost = [];
+
+function rolemembershipModify(keysID,UID){
+	let keyparent = UID+"_ParentMember";
+	var test = db.ref('users');
+	test.once("value", function(snap) {
+	console.log('snap.val()', snap.val());
+	});
+	
+	// Session::get('uid_parent')."_ParentMember";
+            // if(!redis()->exists(env('REDIS_PATH', 'local:').keyparent)){
+            //     $refparent  = firebase("db")->getReference('users/'.$UID.'/identity');
+            //     $snapparent   = $refparent->getSnapshot();
+            //     $valueparent      = $snapparent->getValue();
+            //     $array=array(
+            //         'membership'=>$valueparent['membership']
+            //     );
+    
+            //     redis()->set(env('REDIS_PATH', 'local:').keyparent, json_encode($array));
+            //     endredis('expire',env('REDIS_PATH', 'local:').keyparent,3600);//group cek expire 1 jam
+            // }
+    
+            // $array = json_decode(redis()->get(env('REDIS_PATH', 'local:').keyparent));
+            // $array = objectToArray($array);
+            // $cat   = $array['membership'];
+    
+            // $keymembership = "membership";
+            // if(!redis()->exists(env('REDIS_PATH', 'local:').$keymembership)){
+            //     $reference = firebase("db")->getReference('payment/category/');
+            //     $snapshot  = $reference->getSnapshot();
+            //     $array    = $snapshot->getValue();
+            //     redis()->set(env('REDIS_PATH', 'local:').$keymembership, json_encode($array));
+            //     endredis('expire',env('REDIS_PATH', 'local:').$keymembership,86400);//group cek expire 1 day
+            // }
+    
+            // $array = json_decode(redis()->get(env('REDIS_PATH', 'local:').$keymembership));
+            // $array = objectToArray($array);
+    
+            // $parentcat=findParent($array,$cat);
+            // $data = ($array[$parentcat]['feature_list'][$feature]['access']);
+            // if($data=='true'){
+            //     return 'unlimited';
+            // }else{
+            //     return $data;
+            // }
+};
