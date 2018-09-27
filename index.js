@@ -152,7 +152,7 @@ function viewDataCallbcak(data,req,res){
 	setTimeout(function getData(){
 		if(timerGet1.get > 0){
 			if(timerGet1.status == true && self.updateRedis.call == false){
-				updateRedistCron(self.data);
+				updateRedistCron(self.allData);
 				timerGet1.status = false;
 				setTimeout(getData, 0);
 			}else{
@@ -177,6 +177,7 @@ app.get('/marketPlaceJobsApi', function(req,res){
 	  
   }else{
 	console.log('err marketPlaceJobsApi :: ');
+	self.redis = { key:redisOption.key, val:redisOption.val, status:redisOption.status};
 	viewDataCallbcak('marketplace-dna work',req,res);
   }
 });
@@ -190,7 +191,7 @@ function getData(req,res,met,baseUrl,dataPost,where){
 			if (result) {
 				console.log('GET result -> exist');
 					dataTmpRedis = JSON.parse(result);
-					checkExist = true;
+					checkExist = true;//false;//true;
 					self.redis.status = 'update';
 			}else{
 				console.log('GET result -> not exist');
@@ -219,7 +220,7 @@ function getData(req,res,met,baseUrl,dataPost,where){
 							}
 						});
 						let postData = {
-							all : allDataUsers_tmp,
+							get : allDataUsers_tmp,
 							marketPlaceUser : tmp_dataMarket
 						};
 						routeCalback(req,res,postData,where);
@@ -271,7 +272,7 @@ function getData(req,res,met,baseUrl,dataPost,where){
 function routeCalback(req,res,feedback,where){
 	if(where == 'allData'){
 		if(feedback){
-			self.data = feedback;
+			self.allData = feedback;
 			self.redis.val = feedback;
 			generateAllDataMarket(req,res);
 		}else{
@@ -287,143 +288,154 @@ function routeCalback(req,res,feedback,where){
 let callTime = {
 	getProdukSale : false,
 	getProdukNotSale : false,
-	getTransaction : false
+	getTransaction : false,
+	getTransactionSellerFailed : false,
+	getTransactionSellerSuccess : false,
+	getCustomerBL : false
 };
 
 function generateAllDataMarket(req,res){
-	if(self.data){
-		if(self.data.marketPlaceUser){
-			let data = self.data.marketPlaceUser;
+	self.default = {// self.acc = {
+		id : [],
+		data : {}
+	};
+	self.getdata = {};
+
+	if(self.allData){
+		if(self.allData.marketPlaceUser){
+			let data = self.allData.marketPlaceUser;
 			objectForeach(data, function (val, prop, obj) {
 				if(val.marketplace){
-					self.acc = {
-						id : [prop],
-						data : {[prop] : {}} 
-					};
-					self.val = val;
+					self.default.id.push(prop);
+					self.default.data[prop] = {};
+					// self.val = val;
 					// profile/brand data extract
 					if(val.identityBisnis){
-						self.acc.data[prop].brand = {};
+						self.default.data[prop].brand = {};
 						objectForeach(val.identityBisnis, function (val1, prop1, obj1) {
 							if(val1){
-								self.acc.data[prop][prop1] = {};
+								self.default.data[prop][prop1] = {};
 								objectForeach(val1, function (val2, prop2, obj2) {
 									if(val2.marketPlace){
-										self.acc.data[prop][prop1][prop2] = val2;
+										self.default.data[prop][prop1][prop2] = val2;
 									}
 								});	
 							}
 						});
 					}else{
 						console.log('tidak ada brand '+prop)
-						self.acc.data[prop].brand = {};
+						self.default.data[prop].brand = {};
 						objectForeach(val.supplier, function (val1, prop1, obj1) {
 							if(val1){
 								objectForeach(val1, function (val2, prop2, obj2) {
 									if(val2){
-										self.acc.data[prop].brand[prop2] = val2;
+										self.default.data[prop].brand[prop2] = val2;
 									}
-								});	
+								});
 							}
 						});
 					}
 					// produk data default extract
 					if(val.produk){
-						let tmpCheckExistProduk = [];
-						self.acc.data[prop].produk = {}
+						// let tmpCheckExistProduk = [];
+						self.default.data[prop].produk = {}
+						// self.default.data[prop].produkMarketplace = []; // for check produk exist
+						let x = 0;
 						objectForeach(val.produk, function (val1, prop1, obj1) {
 							if(val1){
-								tmpCheckExistProduk.push({[prop1] : val1});
+								x++;//tmpCheckExistProduk.push({[prop1] : val1});
 								if(val1.marketPlace){
-									console.log('ada produk')
-									self.acc.data[prop].produk[prop1] = val1;
+									self.default.data[prop].produk[prop1] = val1;
+									// self.default.data[prop].produkMarketplace.push(val1.marketPlace);
 								}
 							}
 						});
-						if(tmpCheckExistProduk.length == 0){
-							self.data.all[prop].produk = {};
-							self.data.marketPlaceUser[prop].produk = {};
+						console.log('ada produk '+x+' selection produk ');//+self.default.data[prop].produkMarketplace.length);
+						if(x == 0 ){//tmpCheckExistProduk.length == 0){
+							self.allData.get[prop].produk = {};
+							self.allData.marketPlaceUser[prop].produk = {};
 						}
 					}else{
-						self.acc.data[prop].produk = {};
+						self.default.data[prop].produk = {};
 					}
 					// kategori data default extract
 					if(val.kategoriProduk){
-						self.acc.data[prop].kategoriProduk = {};
+						self.default.data[prop].kategoriProduk = {};
 						let tmpCheckExistKtg = [];
 						objectForeach(val.kategoriProduk, function (val1, prop1, obj1) {
 							if(val1){
-								self.acc.data[prop].kategoriProduk[prop1] = val1;
+								self.default.data[prop].kategoriProduk[prop1] = val1;
 								tmpCheckExistKtg.push({[prop1] : val1});
 							}
 						});
 						if(tmpCheckExistKtg.length == 0){
-							self.data.all[prop].kategoriProduk = {};
-							self.data.marketPlaceUser[prop].kategoriProduk = {};
-							self.acc.data[prop].kategoriProduk = {};
+							self.allData.get[prop].kategoriProduk = {};
+							self.allData.marketPlaceUser[prop].kategoriProduk = {};
+							// self.default.data[prop].kategoriProduk = {};
 						}
 					}else{
-						self.acc.data[prop].kategoriProduk = {};
+						self.default.data[prop].kategoriProduk = {};
 						console.log('tidak ada kategoriProduk '+prop)
 					}
 					// marketPlace data extract
 					objectForeach(val.marketplace, function (val1, prop1, obj1) {
-                        self.acc.data[prop]['account'+prop1] = [];
-						self.acc.data[prop]['produkImport'+prop1] = [];
-                        self.acc.data[prop]['transaksiImport'+prop1] = [];
-                        self.acc.data[prop]['customerImport'+prop1] = [];
+                        self.default.data[prop]['account'+prop1] = [];
+						self.default.data[prop]['produkImport'+prop1] = [];
+                        self.default.data[prop]['transaksiImport'+prop1] = [];
+                        self.default.data[prop]['customerImport'+prop1] = [];
 						objectForeach(val1, function (val2, prop2, obj2) {
 							if(prop2 == 'produkImport' || prop2 == 'transaksiImport' || prop2 == 'customerImport'){
 								if(prop2 == 'produkImport'){
 									objectForeach(val2, function (val3, prop3, obj3) {
 										if(val3){
-											self.acc.data[prop]['produkImport'+prop1].push(val3);
+											self.default.data[prop]['produkImport'+prop1].push(val3);
 										}
 									});
 								}else if(prop2 == 'transaksiImport'){
 									objectForeach(val2, function (val3, prop3, obj3) {
 										if(val3){
-											self.acc.data[prop]['transaksiImport'+prop1].push(val3);
+											self.default.data[prop]['transaksiImport'+prop1].push(val3);
 										}
 									});
 								}else if(prop2 == 'customerImport'){
 									objectForeach(val2, function (val3, prop3, obj3) {
 										if(val3){
-											self.acc.data[prop]['customerImport'+prop1].push(val3);
+											self.default.data[prop]['customerImport'+prop1].push(val3);
 										}
 									});
 								}
 							}else{
-								self.acc.data[prop]['account'+prop1].push(val2);
+								self.default.data[prop]['account'+prop1].push(val2);
 							}
 						});	
 					});
 				}
 
 			});
-			
-			if(self.acc.id.length > 0){
-				timerGet.timeC = 0;//self.acc.id.length;//1;
+			// res.send(self);
+			// return;
+			if(self.default.id.length > 0){
+				timerGet.timeC = 0;//self.default.id.length;//1;
 				timerGet.status = true;
 				timerGet.lData = 0;
-				self.getdata = {};
+				// self.getdata = {};
 				setTimeout(function allData(){
-					if(self.acc.id[timerGet.timeC]){
+					if(self.default.id[timerGet.timeC]){
 
-						let id = self.acc.id[timerGet.timeC];
+						let id = self.default.id[timerGet.timeC];
 						callTime.getProdukSale = false;
 						callTime.getProdukNotSale = false;
 						callTime.getTransaction = false;
 
-						if(self.acc.data[id].accountbukalapak){
-							if(self.acc.data[id].accountbukalapak.length > 0){//[self.acc.id[timerGet.lData]].accountbukalapak){
+						if(self.default.data[id].accountbukalapak){
+							if(self.default.data[id].accountbukalapak.length > 0){//[self.default.id[timerGet.lData]].accountbukalapak){
 							// ambil data per account
 								timerGet.lData = 0;
 								setTimeout(function getDataAccoun(){
-									if(timerGet.lData < self.acc.data[id].accountbukalapak.length){
-										if(self.acc.data[id].accountbukalapak[timerGet.lData]){
+									if(timerGet.lData < self.default.data[id].accountbukalapak.length){
+										if(self.default.data[id].accountbukalapak[timerGet.lData]){
 											//get data produk
-											let dataTmpAcc = self.acc.data[id].accountbukalapak[timerGet.lData];										
+											let dataTmpAcc = self.default.data[id].accountbukalapak[timerGet.lData];										
 											if(callTime.getProdukSale == false && callTime.getProdukNotSale == false && callTime.getTransaction == false){
 												let dataAccBukalapak = true;
 												self.getdata[dataTmpAcc.i] = {};
@@ -441,6 +453,8 @@ function generateAllDataMarket(req,res){
 													}
 												},0);
 											}else if(callTime.getProdukSale == false && callTime.getProdukNotSale == true && callTime.getTransaction == false){
+												// res.send(self);
+												// return;
 												let dataAccBukalapak1 = true;
 												setTimeout(function dataSale(){
 													if(dataAccBukalapak1 == true){
@@ -506,7 +520,7 @@ function generateAllDataMarket(req,res){
 					}
 				},0);
 			}else{
-				console.log('err :: data users marketPlaceUser '+self.acc.id.length);
+				console.log('err :: data users marketPlaceUser '+self.default.id.length);
 				viewDataCallbcak(self,req,res);
 			}
 		}else{
@@ -574,7 +588,7 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
 					d : timerGet1.get,
 					_w : _w
 				});
-				console.log('get_ '+_w+' '+c+' '+dataPost);
+				// console.log('get_ '+_w+' '+c+' '+dataPost);
 				request.get({
 					headers: {'content-type': 'application/x-www-form-urlencoded'},
 					url: self._paramsData.uri+'2?'+dataPost,
@@ -584,7 +598,7 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
 						let _returns =  JSON.parse(response.body);
 						let feedback = [];
 						if(_returns.status == true && _returns.data){
-							console.log(_w+' '+_returns.data.length)
+							// console.log(_w+' '+_returns.data.length)
 							if(_returns.data.length > 0){
 								feedback = replaceText(_returns.data);
 							}
@@ -617,12 +631,18 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
 			}
 		}else{
 			if(c == 'getProdukSale'){
-				// callTime.getProdukSale = true;
-				generateProduk('produk',dataTmpAcc.i,c,_w,allData,UID);
+				if(allData.length > 0){
+					generateProduk('produk',dataTmpAcc.i,c,_w,allData,UID);
+				}else{
+					callTime.getProdukSale = true;
+				}
 			}
 			if(c == 'getProdukNotSale'){
-				// callTime.getProdukNotSale = true;
-				generateProduk('produk',dataTmpAcc.i,c,_w,allData,UID);
+				if(allData.length > 0 ){
+					generateProduk('produk',dataTmpAcc.i,c,_w,allData,UID);
+				}else{
+					callTime.getProdukNotSale = true;
+				}
 			}
 
 		}
@@ -649,9 +669,8 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w,UID){
 	setTimeout(function getData(){
 		if(timerGet1.get > 0){
 			if(timerGet1.status == true){
-				console.log('getData')
 
-				let dataPost = qs.stringify({
+				let dataPost = {//qs.stringify({
 					pass: self._paramsData.pass,
 					met: self._paramsData.met,
 					u : dataTmpAcc.i,
@@ -659,18 +678,25 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w,UID){
 					c : c,
 					d : timerGet1.get,
 					_w : _w
-				});
+				};//);
 				request.get({
-					headers: {'content-type': 'application/x-www-form-urlencoded'},
-					url: self._paramsData.uri+'2?'+dataPost,
-					body: dataPost
-				}, function(error, response, body){
+					headers: {'content-type': 'application/json'},
+					url: self._paramsData.uri+'3',
+					json: { 'json' : dataPost }
+				},
+				// console.log('transaksi '+dataPost)
+				// request.get({
+				// 	headers: {'content-type': 'application/x-www-form-urlencoded'},
+				// 	url: self._paramsData.uri+'2?'+dataPost,
+				// 	body: dataPost
+				// }, 
+				function(error, response, body){
 					if(!error && response.body){
-						let _returns =  JSON.parse(response.body);
+						let _returns =  response.body;//JSON.parse(response.body);
 						
 						let feedback = [];
 						if(_returns.status == true && _returns.data){
-							console.log(_w+' '+_returns.data.length)
+							console.log(c+' '+_returns.data.length)
 							if(_returns.data.length > 0){
 								feedback = replaceText(_returns.data);
 							}
@@ -729,8 +755,19 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w,UID){
 			}
 		}else{
 			if(c == 'getTransaction'){
-				callTime.getTransaction = true;
-				console.log(c+' '+_w+' '+dataTmpAcc.i+'loaded');
+				// callTime.getTransaction = true;
+				// console.log(c+' '+_w+' '+dataTmpAcc.i+'loaded');
+				
+				// pemecahan customer, transaksi berhasil, transaksi gagal & produk;
+				// getTransactionSellerFailed
+				// getTransactionSellerSuccess
+				// getCustomerBL
+				// call extractor transaksion
+				if(self.getdata[dataTmpAcc.i][c].allTransaction.length > 0){
+					extractTransaction(dataTmpAcc,c,_w,UID);
+				}else{
+					callTime.getTransaction = true;
+				}
 			}
 		}
 	},0);
@@ -759,8 +796,8 @@ function generateProduk(a,id,c,_w,allData,UID){
 		// allData = self.regulasiData.allData;
 	}
 
-	if(self.acc.data[UID].brand){
-		objectForeach(self.acc.data[UID].brand, function (v, k, obj) {
+	if(self.default.data[UID].brand){
+		objectForeach(self.default.data[UID].brand, function (v, k, obj) {
 			if(v.marketPlace){
 				if(v.marketPlace.id == id && v.marketPlace.marketPlace == _w){
 					getProfile = false;
@@ -775,7 +812,7 @@ function generateProduk(a,id,c,_w,allData,UID){
 		});
 	}
 	
-	if(getProfile == false){
+	if(getProfile == false && allData.length > 0){
 		timerGet1.get = 1;
 		timerGet1.status = true;
 
@@ -931,14 +968,7 @@ function generateProduk(a,id,c,_w,allData,UID){
 						//check produk exist on database
 						objectForeach(feedback, function (v, k, obj) {
 							if(v.marketPlace.id_produk){
-								tOf = false;
-								if(self.acc.data[UID]['produkImport'+_w].length > 0){
-									objectForeach(self.acc.data[UID]['produkImport'+_w], function (v1, k, obj) {
-										if(v1.id_produk == v.marketPlace.id_produk){
-											tOf = true;
-										}
-									});
-								}
+								tOf = checkExistProduk(v,self.default.data[UID]['produkImport'+_w],_w);
 								if(tOf == false){
 									self.getdata[id][c].push(v);
 								}
@@ -947,35 +977,47 @@ function generateProduk(a,id,c,_w,allData,UID){
 						
 						if(self.getdata[id][c].length > 0 ){
 							console.log('ada data baru '+id+' di '+_w+' loaded!');
+							if(c == 'getProdukSale'){
+								checkKtg(self.getdata[id][c],a,UID,c,_w);
+							}
+							if(c == 'getProdukNotSale'){
+								checkKtg(self.getdata[id][c],a,UID,c,_w);
+							}
 						}else{
 							console.log('Tidak ada data baru '+id+' di '+_w+' loaded!');
+							if(c == 'getProdukSale'){
+								callTime.getProdukSale = true;
+							}
+							if(c == 'getProdukNotSale'){
+								callTime.getProdukNotSale = true;
+							}
 						}
 					}else if(a == 'transaksi'){
 						self.regulasiData.dataList = feedback;
 					}
-					if(c == 'getProdukSale'){
-						checkKtg(self.getdata[id][c],a,UID,c,_w);
-					}
-					if(c == 'getProdukNotSale'){
-						checkKtg(self.getdata[id][c],a,UID,c,_w);
-					}
 				}else{
 					if(a == 'produk'){
 						console.log(id+' tidak mempunyai data produk di '+_w+'!');
+						if(c == 'getProdukSale'){
+							callTime.getProdukSale = true;
+						}
+						if(c == 'getProdukNotSale'){
+							callTime.getProdukNotSale = true;
+						}
 					}else if(a == 'transaksi'){
 						self.regulasiData.dataList = feedback;
 					}
-					if(c == 'getProdukSale'){
-						callTime.getProdukSale = true;
-					}
-					if(c == 'getProdukNotSale'){
-						callTime.getProdukNotSale = true;
-					}
 				}
 			}
-		},0);            
+		},0);
 	}else{
 		console.log('err get brand '+id);
+		if(c == 'getProdukSale'){
+			callTime.getProdukSale = true;
+		}
+		if(c == 'getProdukNotSale'){
+			callTime.getProdukNotSale = true;
+		}
 	}
 };
 
@@ -986,7 +1028,7 @@ function checkKtg(data,where,UID,c,_w){
 	let ktgArr = [];
 	let ktgUpload = [];
 	let uniqueNames =  [];
-	let tmpCheckExistKtg = [];
+	// let tmpCheckExistKtg = [];
 	if(data.length > 0){
 		objectForeach(data, function (v, k, obj) {
 			if(v.kategori){
@@ -994,64 +1036,73 @@ function checkKtg(data,where,UID,c,_w){
 			}
 		});
 	}
-	if(self.acc.data[UID].kategoriProduk){
-		objectForeach(self.acc.data[UID].kategoriProduk, function (v, k, obj) {
+
+	ktg = unique_array(ktg);
+
+	if(self.default.data[UID].kategoriProduk){
+		objectForeach(self.default.data[UID].kategoriProduk, function (v, k, obj) {
 			if(v.kategori){
 				ktgArr.push(v.kategori.toLowerCase());
-				tmpCheckExistKtg.push(v.kategori.toLowerCase());
+				// tmpCheckExistKtg.push(v.kategori.toLowerCase());
 			}
 		});
 	}
 
-	uniqueNames = unique_array(ktg);
-	console.log('ktg uniqueNames '+uniqueNames.length)
-	if(uniqueNames.length > 0){
-		for(var i = 0; i < uniqueNames.length; i++){
+	ktgArr = unique_array(ktgArr);
+
+	if(ktg.length > 0){
+		for(var i = 0; i < ktg.length; i++){
 			// if(ktgArr.length > 0){
-			if(ktgArr.indexOf(uniqueNames[i].toLowerCase()) === -1){
+			if(ktgArr.indexOf(ktg[i].toLowerCase()) === -1){
 				ktgUpload.push({
-					kategori: uniqueNames[i]
+					kategori: ktg[i]
 				});
 			}
 		};
-	}
+	}	
 	
 	if(ktgUpload.length > 0 ){
-		console.log('upload ktg')
 		timerGet1.get = 1;
 		timerGet1.status = true;
+		let x = 0;
 		setTimeout(function getData(){
 			if(timerGet1.get > 0){
 				if(timerGet1.status == true && ktgUpload[timerGet1.get-1]){
-					let dataConverUp = JSON.stringify(ktgUpload[timerGet1.get-1]);
-					let dataPost = qs.stringify({
+
+					let dataConverUp = ktgUpload[timerGet1.get-1];//JSON.stringify(ktgUpload[timerGet1.get-1]);
+					let dataPost = {
 						pass: self._paramsData.pass,
 						met: self._paramsData.met,
 						u : UID,
 						p : '',
-						c : 'new',
+						c : 'newKtg',
 						d : dataConverUp,
 						_w : 'importKategori'
-					});
+					};
 					request.get({
-						headers: {'content-type': 'application/json'},//x-www-form-urlencoded'},
-						url: self._paramsData.uri+'2?'+dataPost,
-						body: dataPost
-					}, function(error, response, body){
+						headers: {'content-type': 'application/json'},
+						url: self._paramsData.uri+'3',
+						json: { 'json' : dataPost }
+					},
+					function(error, response, body){
+						self.produkPost.kategori.push(dataConverUp);
 						if(!error && response.body){
 							let _returns =  response.body;
-							if(_returns && (timerGet1.get-1) < ktgUpload.length){
-								self.acc.data[UID].kategoriProduk[_returns] = ktgUpload[timerGet1.get-1];
-								self.data.all[UID].kategoriProduk[_returns] = ktgUpload[timerGet1.get-1];
-								self.data.marketPlaceUser[UID].kategoriProduk[_returns] = ktgUpload[timerGet1.get-1];
-								
-								tmpCheckExistKtg.push(ktgUpload[timerGet1.get-1].kategori);
+							x++;
+							if(_returns.status == true && (timerGet1.get-1) < ktgUpload.length){
+								self.default.data[UID].kategoriProduk[_returns.data] = ktgUpload[timerGet1.get-1];
+								self.allData.get[UID].kategoriProduk[_returns.data] = ktgUpload[timerGet1.get-1];
+								self.allData.marketPlaceUser[UID].kategoriProduk[_returns.data] = ktgUpload[timerGet1.get-1];
 								timerGet1.status = true;
 								timerGet1.get++;
-
 							}else{
-								timerGet1.status = false;
-								timerGet1.get = 0;
+								if((timerGet1.get-1) < ktgUpload.length){
+									timerGet1.status = true;
+									timerGet1.get++;
+								}else{
+									timerGet1.status = false;
+									timerGet1.get = 0;
+								}
 							}
 						}else{
 							timerGet1.status = false;
@@ -1061,18 +1112,21 @@ function checkKtg(data,where,UID,c,_w){
 					timerGet1.status = false;
 					setTimeout(getData, 0);
 				}else{
-					 if(!ktgUpload[timerGet1.get-1]){
+					if(!ktgUpload[timerGet1.get-1]){
 						timerGet1.status = false;
 						timerGet1.get = 0;
 						setTimeout(getData, 0);
+					}else{
+						setTimeout(getData, 0);
 					}
-					setTimeout(getData, 0);
 				}
 			}else{
+				console.log(ktgUpload.length+' kategori baru upload -> '+x);
 				saveContinue(data,where,UID,c,_w);
 			}
 		},0);
 	}else{
+		console.log('tidak ada ktg baru')
 		saveContinue(data,where,UID,c,_w);
 	}
 };
@@ -1105,13 +1159,13 @@ function updateRedistCron(data){
 		if (result) {
 			console.log('GET result -> exist');
 				// self.redis.val = JSON.parse(result);
-				// self.data = JSON.parse(result);
+				// self.allData = JSON.parse(result);
 				checkExist = true;
 		}else{
 			console.log('GET result -> not exist');
 		}
 		if(checkExist == false){
-			if(self.redis.status == 'create'){
+			if(self.redis.status == 'create' && data){
 				console.log('create redis');
 				clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);//JSON.stringify(self.redis.val), redis.print);
 				clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 86400);
@@ -1119,7 +1173,7 @@ function updateRedistCron(data){
 				self.redis.val = data;
 			}
 		}else{
-			if(self.redis.status == 'update'){
+			if(self.redis.status == 'update' && data){
 				console.log('update redis');
 				clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);
 				clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 86400);
@@ -1131,18 +1185,13 @@ function updateRedistCron(data){
 };
 
 function saveContinue(data,where,UID,c,_w){
-
+	// return;
 	if(data.length > 0){
-		// let dataCount = {
-		// 	promo:0,
-		// 	reguler:0
-		// }
 
 		objectForeach(data, function (v, k, obj) {
 			if(v.kategori){
-				// ktg.push(v.kategori);
-				if(self.acc.data[UID].kategoriProduk){
-					objectForeach(self.acc.data[UID].kategoriProduk, function (v1, k1, obj1) {
+				if(self.default.data[UID].kategoriProduk){
+					objectForeach(self.default.data[UID].kategoriProduk, function (v1, k1, obj1) {
 						if(v1.kategori.toLowerCase() == v.kategori.toLowerCase()){
 							v.kategori = k1;
 						}
@@ -1150,136 +1199,100 @@ function saveContinue(data,where,UID,c,_w){
 				}
 			}
 		});
-	// }
 		
-
-	// auto save data produk
-	self.produkPost = [];
-	timerGet1.get = 1;
-	timerGet1.status = true;
-	setTimeout(function getData(){
-		if(timerGet1.get > 0){
-			if(timerGet1.status == true && data[timerGet1.get-1]){
-				let produkPostStatus = true ;//true;
-				let id_tmp = data[timerGet1.get-1].marketPlace.id_produk;
-				let arrP = [];
-				if(self.acc.data[UID]['produkImport'+_w].length > 0){//['produkImport'+nameMarket].length > 0){
-					objectForeach(self.acc.data[UID]['produkImport'+_w],function(v,k,obj){
-						if(v.id_produk){ //id_produk){
-							// console.log('cek id produk'+id_tmp);
-							if(v.id_produk == id_tmp){
-								produkPostStatus = false;
-								arrP.push(v.id_produk);
-								// console.log('sama produkny '+v.id_produk+' :: '+data[timerGet1.get-1].marketPlace.id_produk)
-							}//else{
-								// console.log('tidak sama '+v.marketPlace.id_produk+' :: '+data[timerGet1.get-1].marketPlace.id_produk)
-							// }
+		timerGet1.get = 1;
+		timerGet1.status = true;
+		let y = 0;
+		let produkPostStatus = true;
+		setTimeout(function getData(){
+			if(timerGet1.get > 0){
+				if(timerGet1.status == true && data[timerGet1.get-1]){
+					produkPostStatus = checkExistProduk(data[timerGet1.get-1],self.default.data[UID]['produkImport'+_w],_w);
+					if(produkPostStatus == false && (timerGet1.get-1) < data.length){
+						let dataConverUp = data[timerGet1.get-1];
+						let dataProduk = '';
+						if(self.allData.get[UID].produk){
+							dataProduk = self.allData.get[UID].produk;
 						}
-					});
-					console.log('id sama1 :: '+arrP.length)
-				}
-				console.log('id sama awal :: '+arrP.length)
-				// if(self.default.produkList.length > 0){
-				// 	angular.forEach(self.default.produkList,function(val,key){
-				// 		if(val.id_produk){
-				// 			if(val.id_produk == v.marketPlace.id_produk){
-				// 				saveDbfirebase = false;
-				// 			}
-				// 		} 
-				// 	});
-				// };
-
-				if(produkPostStatus == true){
-				
-					let dataConverUp = data[timerGet1.get-1];//JSON.stringify(data[timerGet1.get-1]);
-					let dataProduk = '';
-					if(self.data.all[UID].produk){
-						dataProduk = self.data.all[UID].produk;//JSON.stringify(self.data.all[UID].produk);
-					}
-					let dataPost = {
-						pass: self._paramsData.pass,
-						met: self._paramsData.met,
-						u : UID,
-						p : dataProduk,
-						c : 'newProduk',
-						d : dataConverUp,
-						_w : 'import_produk'
-					};
-					request.get({
-						headers: {'content-type': 'application/json'},
-						url: self._paramsData.uri+'3',
-						json: { 'json' : dataPost }
-					}, function(error, response, body){
-						if(!error && response.body){
-							let _returns =  response.body;
-							console.log('status feed '+_returns.status);
-							self.produkPost.push({data:dataPost,return:_returns});
-							if(_returns.status == true && (timerGet1.get-1) < data.length){
-								if(_returns.updateProduk ){//&& timerGet1.get == 1){
-									self.acc.data[UID].produk[_returns.updateProduk] = data[timerGet1.get-1];
-									self.data.all[UID].produk[_returns.updateProduk] = data[timerGet1.get-1];
-									self.data.marketPlaceUser[UID].produk[_returns.updateProduk] = data[timerGet1.get-1];
-								}
-								if(_returns.updateMarket ){//&& timerGet1.get == 1){
-									if(!self.data.all[UID].marketplace[_w].produkImport){
-										console.log('belum ada data self.data.all')
-										self.data.all[UID].marketplace[_w].produkImport = {};
+						let dataPost = {
+							pass: self._paramsData.pass,
+							met: self._paramsData.met,
+							u : UID,
+							p : dataProduk,
+							c : 'newProduk',
+							d : dataConverUp,
+							_w : 'import_produk'
+						};
+						request.get({
+							headers: {'content-type': 'application/json'},
+							url: self._paramsData.uri+'3',
+							json: { 'json' : dataPost }
+						}, function(error, response, body){
+							if(!error && response.body){
+								let _returns =  response.body;
+								self.produkPost.produk.push(dataConverUp);
+								if(_returns.status == true && (timerGet1.get-1) < data.length){
+									if(_returns.updateProduk ){
+										self.default.data[UID].produk[_returns.updateProduk] = data[timerGet1.get-1];
+										self.allData.get[UID].produk[_returns.updateProduk] = data[timerGet1.get-1];
+										self.allData.marketPlaceUser[UID].produk[_returns.updateProduk] = data[timerGet1.get-1];
 									}
-									if(!self.data.marketPlaceUser[UID].marketplace[_w].produkImport){
-										console.log('belum ada data self.data.marketPlaceUser')
-										self.data.marketPlaceUser[UID].marketplace[_w].produkImport = {};
-									}
-									// if(!self.acc.data[UID]['produkImport'+nameMarket]){
-									// 	console.log('belum ada data self.acc.data')
-									// 	self.acc.data[UID]['produkImport'+nameMarket] = [];
-									// }
-				
-									self.acc.data[UID]['produkImport'+_w].push(data[timerGet1.get-1].marketPlace);
-									self.data.all[UID].marketplace[_w].produkImport[_returns.updateMarket] = data[timerGet1.get-1].marketPlace;
-									self.data.marketPlaceUser[UID].marketplace[_w].produkImport[_returns.updateMarket] = data[timerGet1.get-1].marketPlace;
-								}				
-								timerGet1.status = true;
-								timerGet1.get++;
-							}else{
-								console.log('push produk1 else')
-								if((timerGet1.get-1) < data.length){
+									if(_returns.updateMarket ){
+										if(!self.allData.get[UID].marketplace[_w].produkImport){
+											self.allData.get[UID].marketplace[_w].produkImport = {};
+										}
+										if(!self.allData.marketPlaceUser[UID].marketplace[_w].produkImport){
+											self.allData.marketPlaceUser[UID].marketplace[_w].produkImport = {};
+										}
+										if(data[timerGet1.get-1].marketPlace){
+											self.default.data[UID]['produkImport'+_w].push(data[timerGet1.get-1].marketPlace);
+										}
+										self.allData.get[UID].marketplace[_w].produkImport[_returns.updateMarket] = data[timerGet1.get-1].marketPlace;
+										self.allData.marketPlaceUser[UID].marketplace[_w].produkImport[_returns.updateMarket] = data[timerGet1.get-1].marketPlace;
+									}				
 									timerGet1.status = true;
 									timerGet1.get++;
 								}else{
-									timerGet1.status = false;
-									timerGet1.get = 0;
+									if((timerGet1.get-1) < data.length){
+										timerGet1.status = true;
+										timerGet1.get++;
+									}else{
+										timerGet1.status = false;
+										timerGet1.get = 0;
+									}
 								}
+								y++;
+							}else{
+								timerGet1.status = false;
+								timerGet1.get = 0;
 							}
-						}else{
-							timerGet1.status = false;
-							timerGet1.get = 0;
-						}
-					});
-					timerGet1.status = false;
+						});
+						timerGet1.status = false;
+					}else{
+						timerGet1.get++;
+						timerGet1.status = true;
+						console.log('id_produk exist')
+					}
+					setTimeout(getData, 0);
 				}else{
-					timerGet1.get++;
-					timerGet1.status = true;
-					console.log('id_produk exist')
-				}
-				setTimeout(getData, 0);
-			}else{
-				if(!data[timerGet1.get-1]){
-					timerGet1.status = false;
-					timerGet1.get = 0;
+					if(!data[timerGet1.get-1]){
+						timerGet1.status = false;
+						timerGet1.get = 0;
+						setTimeout(getData, 0);
+					}
 					setTimeout(getData, 0);
 				}
-				setTimeout(getData, 0);
+			}else{
+				// saveContinue(data,where,UID,c);
+				console.log(data.length+' '+c+' baru uploaded -> '+y);
+				if(c == 'getProdukSale'){
+					callTime.getProdukSale = true;
+				}
+				if(c == 'getProdukNotSale'){
+					callTime.getProdukNotSale = true;
+				}
 			}
-		}else{
-			// saveContinue(data,where,UID,c);
-			if(c == 'getProdukSale'){
-				callTime.getProdukSale = true;
-			}
-			if(c == 'getProdukNotSale'){
-				callTime.getProdukNotSale = true;
-			}
-		}
-	},0);
+		},0);
 	
 	}else{
 		if(c == 'getProdukSale'){
@@ -1291,7 +1304,856 @@ function saveContinue(data,where,UID,c,_w){
 	}
 };
 
-self.produkPost = [];
+self.produkPost = {produk:[],kategori:[]};
+
+// check produk exist
+function checkExistProduk(dataCheck,dataForcheck,_w){
+	let tOf = false;
+	if(_w.toLowerCase() == 'bukalapak'){
+		if(dataCheck.marketPlace.id_produk){
+			tOf = false;
+			if(dataForcheck.length > 0){
+				objectForeach(dataForcheck, function (v1, k, obj) {
+					if(v1.id_produk == dataCheck.marketPlace.id_produk){
+						tOf = true;
+					}
+				});
+			}
+		}
+	}
+	return tOf;
+};
+
+function extractTransaction(idMarket,c,_w,UID){
+	let pushDataTable = false;
+    let feedback = [];
+	let dataHasilSeleksi = [];
+	let idGet = idMarket.i;
+	// console.log(c,idMarket,self.getdata[idGet])
+	// self.dataTransactions.dataPost = [];
+	// params
+	let allTransaction = self.getdata[idGet][c].allTransaction;
+	let pending = self.getdata[idGet][c].pending;
+	let addressed = self.getdata[idGet][c].addressed;
+	let payment_chosen = self.getdata[idGet][c].payment_chosen;
+	let confirm_payment = self.getdata[idGet][c].confirm_payment;
+	let paid = self.getdata[idGet][c].paid;
+	let delivered = self.getdata[idGet][c].delivered;
+	let received = self.getdata[idGet][c].received;
+	let remitted = self.getdata[idGet][c].remitted;
+	let rejected = self.getdata[idGet][c].rejected;
+	let cancelled = self.getdata[idGet][c].cancelled;
+	let expired = self.getdata[idGet][c].expired;
+	let refunded = self.getdata[idGet][c].refunded;
+	
+	self.getdata[idGet]['getTransactionSellerFailed'] = {};//[];
+	self.getdata[idGet]['getTransactionSellerSuccess'] = [];
+	self.getdata[idGet]['getTransactionBuyerFailed'] = [];
+	self.getdata[idGet]['getTransactionBuyerSuccess'] = [];
+	self.getdata[idGet]['getCustomerBL'] = [];
+
+	let getTransactionSellerFailed = [];
+	let getTransactionSellerSuccess = [];
+	let getTransactionBuyerFailed = [];
+	let getTransactionBuyerSuccess = [];
+	let getCustomerBL = [];
+	
+	if(pending.length > 0){
+		objectForeach(pending, function (v, k, obj) {
+			if(v){
+				getTransactionSellerFailed.push(v);
+			}
+		});
+	}
+	if(addressed.length > 0){
+		objectForeach(addressed, function (v, k, obj) {
+			if(v){
+				// getTransactionSellerFailed.push(v);
+			}
+		});
+	}
+	if(payment_chosen.length > 0){
+		objectForeach(payment_chosen, function (v, k, obj) {
+			if(v){
+				getTransactionBuyerFailed.push(v);
+			}
+		});
+	}
+	if(confirm_payment.length > 0){
+		objectForeach(confirm_payment, function (v, k, obj) {
+			if(v){
+				getTransactionSellerFailed.push(v);
+				getTransactionBuyerFailed.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(paid.length > 0){
+		objectForeach(paid, function (v, k, obj) {
+			if(v){
+				getTransactionSellerSuccess.push(v);
+				getTransactionBuyerSuccess.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(delivered.length > 0){
+		objectForeach(delivered, function (v, k, obj) {
+			if(v){
+				getTransactionSellerSuccess.push(v);
+				getTransactionBuyerSuccess.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(received.length > 0){
+		objectForeach(received, function (v, k, obj) {
+			if(v){
+				getTransactionSellerSuccess.push(v);
+				getTransactionBuyerSuccess.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(remitted.length > 0){
+		objectForeach(remitted, function (v, k, obj) {
+			if(v){
+				getTransactionSellerSuccess.push(v);
+				getTransactionBuyerSuccess.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(rejected.length > 0){
+		objectForeach(rejected, function (v, k, obj) {
+			if(v){
+				getTransactionSellerFailed.push(v);
+				getTransactionBuyerFailed.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(cancelled.length > 0){
+		objectForeach(cancelled, function (v, k, obj) {
+			if(v){
+				getTransactionSellerFailed.push(v);
+				getTransactionBuyerFailed.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(expired.length > 0){
+		objectForeach(expired, function (v, k, obj) {
+			if(v){
+				getTransactionSellerFailed.push(v);
+				getTransactionBuyerFailed.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+	if(refunded.length > 0){
+		objectForeach(refunded, function (v, k, obj) {
+			if(v){
+				getTransactionSellerFailed.push(v);
+				getTransactionBuyerFailed.push(v);
+				getCustomerBL.push(v);
+			}
+		});
+	}
+
+	// self.getdata[idGet]['getTransactionSellerFailed'] = getTransactionSellerFailed;
+	self.getdata[idGet]['getTransactionSellerSuccess'] = getTransactionSellerSuccess;
+	self.getdata[idGet]['getTransactionBuyerFailed'] = getTransactionBuyerFailed;
+	self.getdata[idGet]['getTransactionBuyerSuccess'] = getTransactionBuyerSuccess;
+	self.getdata[idGet]['getCustomerBL'] = getCustomerBL;
+
+	console.log('data getTransactionSellerFailed '+getTransactionSellerFailed.length);
+	if(getTransactionSellerFailed.length > 0){
+		dataHasilSeleksi = [];
+		console.log('data dataHasilSeleksi before '+dataHasilSeleksi.length);
+		objectForeach(getTransactionSellerFailed, function (v, k, obj) {
+		if(v){
+			let pemesanan = {};
+			if(v.amount_details.length > 0){
+				pemesanan = {
+					asuransi: 0,
+					biayaLain: {
+						key: '',
+						val: 0,
+					},
+					diskon: {
+						key:'',
+						money:0,
+						percent:0
+					},
+					grandTotal:0,
+					jumlahBarang:0,
+					jumlahBobot:0,
+					jumlahItem:0,
+					ongkir:0,
+					subTotal:0,
+					tglOrder:{
+						date:v.created_at,
+						tmpDate:'' 
+					}
+				};
+				objectForeach(refunded, function (v1, k1, obj1) {
+					if(v1.name == 'Harga Total Belanja'){
+						if(v1.amount){
+							pemesanan.subTotal = v1.amount
+						}
+					}else if(v1.name == 'Biaya Kurir'){
+						if(v1.amount){
+							pemesanan.ongkir = v1.amount
+						}
+					}else if(v1.name == 'Biaya Asuransi'){
+						if(v1.amount){
+							pemesanan.asuransi = v1.amount
+						}
+					}else if(v1.name == 'Kode Pembayaran'){
+						if(v1.amount){
+							if(pemesanan.biayaLain.val){
+								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+							}else{
+								pemesanan.biayaLain.val = v1.amount;
+								pemesanan.biayaLain.key = v1.name;
+							}
+						}
+					}else if(v1.name == 'Biaya Administrasi'){
+						if(v1.amount){
+							if(pemesanan.biayaLain.val){
+								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+							}else{
+								pemesanan.biayaLain.val = v1.amount;
+								pemesanan.biayaLain.key = v1.name;
+							}
+						}
+					}else if(v1.name == 'Tip untuk Pelapak'){
+						if(v1.amount){
+							if(pemesanan.biayaLain.val){
+								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+							}else{
+								pemesanan.biayaLain.val = v1.amount;
+								pemesanan.biayaLain.key = v1.name;
+							}
+						}
+					}else if(v1.name == 'Diskon Metode Pembayaran'){
+						let diskTmp = 0;
+						if(v1.amount < 0){
+							diskTmp = 0 - parseInt(v1.amount);
+						}else{
+							diskTmp = v1.amount;
+						}
+						if(diskTmp){
+							if(pemesanan.diskon.money){
+								pemesanan.diskon.key = 'rp';
+								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+								pemesanan.diskon.money = disTmp;
+								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}else{
+								pemesanan.diskon.key = 'rp';
+								pemesanan.diskon.money = diskTmp,
+								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}
+						}
+					}else if(v1.name == 'Potongan Voucher'){
+						let diskTmp = 0;
+						if(v1.amount < 0){
+							diskTmp = 0 - parseInt(v1.amount);
+						}else{
+							diskTmp = v1.amount;
+						}
+						if(diskTmp){
+							if(pemesanan.diskon.money){
+								pemesanan.diskon.key = 'rp';
+								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+								pemesanan.diskon.money = disTmp;
+								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}else{
+								pemesanan.diskon.key = 'rp';
+								pemesanan.diskon.money = diskTmp,
+								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}
+						}
+					}else if(v1.name == 'Potongan Ongkir Pembeli Prioritas'){
+						let diskTmp = 0;
+						if(v1.amount < 0){
+							diskTmp = 0 - parseInt(v1.amount);
+						}else{
+							diskTmp = v1.amount;
+						}
+						if(diskTmp){
+							if(pemesanan.diskon.money){
+								pemesanan.diskon.key = 'rp';
+								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+								pemesanan.diskon.money = disTmp;
+								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}else{
+								pemesanan.diskon.key = 'rp';
+								pemesanan.diskon.money = diskTmp,
+								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}
+						}
+					}else if(v1.name == 'Total Pembayaran'){
+						let dmpTmp = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+						if(v1.amount == dmpTmp){
+							pemesanan.grandTotal = v1.amount;
+						}else{
+							pemesanan.grandTotal = dmpTmp;
+						}
+					}
+				});
+			}
+			if(pemesanan.grandTotal && v.seller.id == idGet){
+				let dmpTot = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+				
+				dataHasilSeleksi.push({
+					status :{
+						bayar:'',
+						lacak:'',
+						orderVia:'Website',
+						produk:'',
+						proses:'',
+						resi:''
+					},
+					ongkir:{
+						addAsal:'',
+						addTujuan:'',
+						asal:'',
+						berat:'',
+						description:'',
+						estimasi:'',
+						harga:'',
+						name_jasa:'',
+						paket_jasa:'',
+						resi:'',
+						statusOngkir:'',
+						tujuan:''
+					},
+					loyalty:{
+						point:0
+					},
+					note: v.buyer_notes,
+					total:{
+						pemesanan : pemesanan,
+						pembayaran : [{
+							bankAccount:{
+								idBank:'',
+								namaBank:'',
+								namaCabang:'',
+								name:'Virtual account '+_w.toLowerCase(),
+								noAkun:''
+							},
+							bayarVia:'bank',
+							cashBack:0,
+							idStaffInput:UID,
+							sisaBayar:0,
+							statusBayar:'',
+							tglBayar:{
+								date:new Date(v.state_changes.paid_at),
+								tmpDate:''
+							},
+							totalBayar:v.payment_amount
+						}],
+						orderVia:{
+							account:'http://www.'+_w.toLowerCase()+'.com/u/'+v.buyer.username,
+							link:'Website'
+						}
+					},
+					originOther:{
+						paymentMethod : v.payment_method,
+						paymentName : v.payment_method_name,
+						paymentDate : v.state_changes.paid_at,
+						paymentAmount : v.payment_amount,
+						paymentRemit : v.remit_amount,
+						paymentRefount : v.refund_amount,
+
+						ship : v.courier,
+						shipService : v.shipping_service,
+						shipping_code : v.shipping_code,
+						shipping_history : v.shipping_history,
+						shipping_fee : v.shipping_fee,
+						shipChoice : v.buyer_logistic_choice,
+						shipDelivered : v.state_changes.delivered_at,
+						shipReceived : v.state_changes.received_at,
+						shipBobot: v.total_weight,
+
+						created : v.created_at,
+						virtual : v.virtual,
+						note : v.buyer_notes,
+						created_on : v.created_on,
+						tagihan : dmpTot,
+						status : v.state
+					},
+					customer : {
+						add:v.consignee.address,
+						identity:{
+							address:{
+								city:{
+									id:'',
+									name:v.consignee.city
+								},
+								districts:{
+									id:'',
+									name:v.consignee.area
+								},
+								postalcode:v.consignee.post_code,
+								province:{
+									id:'',
+									name:v.consignee.province
+								},
+								street:v.consignee.address
+							},
+							contact:{
+								email:v.buyer.email,
+								facebookName:'',
+								instagram:'',
+								lineID:'',
+								phone:v.consignee.phone
+							},
+							alamat:v.consignee.address,
+							namaToko:v.buyer.name,
+							nama: v.buyer.name,
+							phone:v.consignee.phone,
+							date:new Date(),
+							gender:'',
+							idParentUser:UID,
+							idStaffInput:UID,
+							kategori:'Pelanggan',
+							username:v.buyer.username,
+							id:v.buyer.id
+						},
+						username:v.buyer.username,
+						ktg:'Pelanggan',
+						status: 'none'
+					},
+					supplier : v.seller,
+					produk : v.products,
+					marketPlace:{
+						url:'https://www.bukalapak.com/payment/transactions/'+v.id,
+						id:v.id,
+						invoice:v.invoice,
+						transaction_id:v.transaction_id
+					},
+
+				});
+			}
+		}
+		});
+		console.log('data dataHasilSeleksi after '+dataHasilSeleksi.length);
+		if(dataHasilSeleksi.length > 0){
+			
+			let dataNotValidOrValid = {
+				valid:[],
+				notValid:[]
+			};
+			
+			objectForeach(getTransactionSellerFailed, function (v, k, obj) {
+				if(v.produk.length > 0){
+					objectForeach(v.produk, function (vProd, kProd, obj1){
+					// angular.forEach(v.produk,function(vProd,kProd){
+						if(vProd.id){
+							let cSama = false;
+							if(self.default.data[UID].produk.length > 0){
+								objectForeach(self.default.data[UID].produk, function (vLp, kLp, obj1){
+								// angular.forEach(self.default.produkList,function(vLp,kLp){
+									if(vLp.marketPlace){
+										if(vLp.marketPlace.id_produk == vProd.id){
+											cSama = true;
+											dataNotValidOrValid.valid.push(vProd);
+										}
+									}
+								});
+							}
+							if(cSama == false){
+								dataNotValidOrValid.notValid.push(vProd);
+							}
+						}
+					});
+				}
+			});
+			self.getdata[idGet]['getTransactionSellerFailed'] = dataNotValidOrValid;
+			// self.generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi);
+		}
+	}else if(getTransactionSellerSuccess.length > 0){
+
+	}else if(getTransactionBuyerFailed.length > 0){
+
+	}else if(getTransactionBuyerSuccess.length > 0){
+
+	}else if(getCustomerBL.length > 0){
+
+	}else{
+
+	}
+
+
+	callTime.getTransaction = true;
+};
+
+/*function relatedTransaction(){
+	if(pushDataTable == true && feedback.length > 0){
+		angular.forEach(feedback,function(v,k){
+			let pemesanan = {};
+			if(v.amount_details.length > 0){
+				pemesanan = {
+					asuransi: 0,
+					biayaLain: {
+						key: '',
+						val: 0,
+					},
+					diskon: {
+						key:'',
+						money:0,
+						percent:0
+					},
+					grandTotal:0,
+					jumlahBarang:0,
+					jumlahBobot:0,
+					jumlahItem:0,
+					ongkir:0,
+					subTotal:0,
+					tglOrder:{
+						date:v.created_at,
+						tmpDate:'' 
+					}
+				};
+				angular.forEach(v.amount_details,function(v1,k1){
+					if(v1.name == 'Harga Total Belanja'){
+						if(v1.amount){
+							pemesanan.subTotal = v1.amount
+						}
+					}else if(v1.name == 'Biaya Kurir'){
+						if(v1.amount){
+							pemesanan.ongkir = v1.amount
+						}
+					}else if(v1.name == 'Biaya Asuransi'){
+						if(v1.amount){
+							pemesanan.asuransi = v1.amount
+						}
+					}else if(v1.name == 'Kode Pembayaran'){
+						if(v1.amount){
+							if(pemesanan.biayaLain.val){
+								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+							}else{
+								pemesanan.biayaLain.val = v1.amount;
+								pemesanan.biayaLain.key = v1.name;
+							}
+						}
+					}else if(v1.name == 'Biaya Administrasi'){
+						if(v1.amount){
+							if(pemesanan.biayaLain.val){
+								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+							}else{
+								pemesanan.biayaLain.val = v1.amount;
+								pemesanan.biayaLain.key = v1.name;
+							}
+						}
+					}else if(v1.name == 'Tip untuk Pelapak'){
+						if(v1.amount){
+							if(pemesanan.biayaLain.val){
+								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+							}else{
+								pemesanan.biayaLain.val = v1.amount;
+								pemesanan.biayaLain.key = v1.name;
+							}
+						}
+					}else if(v1.name == 'Diskon Metode Pembayaran'){
+						let diskTmp = 0;
+						if(v1.amount < 0){
+							diskTmp = 0 - parseInt(v1.amount);
+						}else{
+							diskTmp = v1.amount;
+						}
+						if(diskTmp){
+							if(pemesanan.diskon.money){
+								pemesanan.diskon.key = 'rp';
+								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+								pemesanan.diskon.money = disTmp;
+								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}else{
+								pemesanan.diskon.key = 'rp';
+								pemesanan.diskon.money = diskTmp,
+								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}
+						}
+					}else if(v1.name == 'Potongan Voucher'){
+						let diskTmp = 0;
+						if(v1.amount < 0){
+							diskTmp = 0 - parseInt(v1.amount);
+						}else{
+							diskTmp = v1.amount;
+						}
+						if(diskTmp){
+							if(pemesanan.diskon.money){
+								pemesanan.diskon.key = 'rp';
+								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+								pemesanan.diskon.money = disTmp;
+								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}else{
+								pemesanan.diskon.key = 'rp';
+								pemesanan.diskon.money = diskTmp,
+								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}
+						}
+					}else if(v1.name == 'Potongan Ongkir Pembeli Prioritas'){
+						let diskTmp = 0;
+						if(v1.amount < 0){
+							diskTmp = 0 - parseInt(v1.amount);
+						}else{
+							diskTmp = v1.amount;
+						}
+						if(diskTmp){
+							if(pemesanan.diskon.money){
+								pemesanan.diskon.key = 'rp';
+								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+								pemesanan.diskon.money = disTmp;
+								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}else{
+								pemesanan.diskon.key = 'rp';
+								pemesanan.diskon.money = diskTmp,
+								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+							}
+						}
+					}else if(v1.name == 'Total Pembayaran'){
+						let dmpTmp = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+						if(v1.amount == dmpTmp){
+							pemesanan.grandTotal = v1.amount;
+						}else{
+							pemesanan.grandTotal = dmpTmp;
+						}
+					}
+				});
+			}
+			if(( a == 'getTransactionSellerFailed' || a == 'getTransactionSellerSuccess' ) && pemesanan.grandTotal && v.seller.id == self.accountMarket.id){
+				let dmpTot = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+				
+				dataHasilSeleksi.push({
+					status :{
+						bayar:'',
+						lacak:'',
+						orderVia:'Website',
+						produk:'',
+						proses:'',
+						resi:''
+					},
+					ongkir:{
+						addAsal:'',
+						addTujuan:'',
+						asal:'',
+						berat:'',
+						description:'',
+						estimasi:'',
+						harga:'',
+						name_jasa:'',
+						paket_jasa:'',
+						resi:'',
+						statusOngkir:'',
+						tujuan:''
+					},
+					loyalty:{
+						point:0
+					},
+					note: v.buyer_notes,
+					total:{
+						pemesanan : pemesanan,
+						pembayaran : [{
+							bankAccount:{
+								idBank:'',
+								namaBank:'',
+								namaCabang:'',
+								name:'Virtual account '+self.aSelectMarket.name.toLowerCase(),
+								noAkun:''
+							},
+							bayarVia:'bank',
+							cashBack:0,
+							idStaffInput:UlogID,
+							sisaBayar:0,
+							statusBayar:'',
+							tglBayar:{
+								date:new Date(v.state_changes.paid_at),
+								tmpDate:''
+							},
+							totalBayar:v.payment_amount
+						}],
+						orderVia:{
+							account:'http://www.'+self.aSelectMarket.name.toLowerCase()+'.com/u/'+v.buyer.username,
+							link:'Website'
+						}
+					},
+					originOther:{
+						paymentMethod : v.payment_method,
+						paymentName : v.payment_method_name,
+						paymentDate : v.state_changes.paid_at,
+						paymentAmount : v.payment_amount,
+						paymentRemit : v.remit_amount,
+						paymentRefount : v.refund_amount,
+
+						ship : v.courier,
+						shipService : v.shipping_service,
+						shipping_code : v.shipping_code,
+						shipping_history : v.shipping_history,
+						shipping_fee : v.shipping_fee,
+						shipChoice : v.buyer_logistic_choice,
+						shipDelivered : v.state_changes.delivered_at,
+						shipReceived : v.state_changes.received_at,
+						shipBobot: v.total_weight,
+
+						created : v.created_at,
+						virtual : v.virtual,
+						note : v.buyer_notes,
+						created_on : v.created_on,
+						tagihan : dmpTot,
+						status : v.state
+					},
+					customer : {
+						add:v.consignee.address,
+						identity:{
+							address:{
+								city:{
+									id:'',
+									name:v.consignee.city
+								},
+								districts:{
+									id:'',
+									name:v.consignee.area
+								},
+								postalcode:v.consignee.post_code,
+								province:{
+									id:'',
+									name:v.consignee.province
+								},
+								street:v.consignee.address
+							},
+							contact:{
+								email:v.buyer.email,
+								facebookName:'',
+								instagram:'',
+								lineID:'',
+								phone:v.consignee.phone
+							},
+							alamat:v.consignee.address,
+							namaToko:v.buyer.name,
+							nama: v.buyer.name,
+							phone:v.consignee.phone,
+							date:new Date(),
+							gender:'',
+							idParentUser:UlogEM,
+							idStaffInput:UlogID,
+							kategori:'Pelanggan',
+							username:v.buyer.username,
+							id:v.buyer.id
+						},
+						username:v.buyer.username,
+						ktg:'Pelanggan',
+						status: 'none'
+					},
+					supplier : v.seller,
+					produk : v.products,
+					marketPlace:{
+						url:'https://www.bukalapak.com/payment/transactions/'+v.id,
+						id:v.id,
+						invoice:v.invoice,
+						transaction_id:v.transaction_id
+					},
+
+				});
+			}
+			// data customer
+			else if( a == 'getCustomerBL' && v.seller.id == self.accountMarket.id){
+				dataHasilSeleksi.push({
+					customer : {
+						add:v.consignee.address,
+						identity:{
+							address:{
+								city:{
+									id:'',
+									name:v.consignee.city
+								},
+								districts:{
+									id:'',
+									name:v.consignee.area
+								},
+								postalcode:v.consignee.post_code,
+								province:{
+									id:'',
+									name:v.consignee.province
+								},
+								street:v.consignee.address
+							},
+							contact:{
+								email:v.buyer.email,
+								facebookName:'',
+								instagram:'',
+								lineID:'',
+								phone:v.consignee.phone
+							},
+							alamat:v.consignee.address,
+							namaToko:v.buyer.name,
+							nama: v.buyer.name,
+							phone:v.consignee.phone,
+							date:new Date(),
+							gender:'',
+							idParentUser:UlogEM,
+							idStaffInput:UlogID,
+							kategori:'Pelanggan',
+							username:v.buyer.username,
+							id:v.buyer.id
+						},
+						username:v.buyer.username,
+						ktg:'Pelanggan',
+						status: 'none'
+					}
+				});
+			}
+
+		});
+		if(dataHasilSeleksi.length > 0 && ( a == 'getTransactionSellerFailed' || a == 'getTransactionSellerSuccess' )){
+			let dataNotValidOrValid = {
+				valid:[],
+				notValid:[]
+			};
+			
+			self.progressBar.all = dataHasilSeleksi.length;
+			self.changeProgress(0);
+
+			angular.forEach(dataHasilSeleksi,function(v,k){
+				if(v.produk.length > 0){
+					angular.forEach(v.produk,function(vProd,kProd){
+						if(vProd.id){
+							let cSama = false;
+							if(self.default.produkList.length > 0){
+								angular.forEach(self.default.produkList,function(vLp,kLp){
+									if(vLp.id_produk == vProd.id){
+										cSama = true;
+
+										dataNotValidOrValid.valid.push(vProd);
+									}
+								});
+							}
+							if(cSama == false){
+								dataNotValidOrValid.notValid.push(vProd);
+							}
+						}
+					});
+				}
+			});
+			self.generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi);
+		}else if(dataHasilSeleksi.length > 0 && a == 'getCustomerBL'){
+			self.extractCustomerTransaction(dataHasilSeleksi,a);
+		}else{
+			self.notifyError2('Anda tidak mempunyai data "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+'!','error');
+		}
+	}else{
+		self.notifyError2('Anda tidak mempunyai data "'+self.upperCasseFirst(self.aSelectGet.name)+'" di '+self.aSelectMarket.name.toLowerCase()+'!','error');
+	}
+};*/
 
 
 const parseJsonAsync = (jsonString) => {
@@ -1300,4 +2162,4 @@ const parseJsonAsync = (jsonString) => {
       resolve(JSON.parse(jsonString))
     })
   })
-}
+};
