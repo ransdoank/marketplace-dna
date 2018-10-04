@@ -7,6 +7,16 @@ let http = require('http');
 let request = require('request');
 let path = require('path');
 let fs = require('fs');
+
+// ext module
+let _existTransaction = require('./libs/_existTransaction') 
+let _foreach = require('./libs/_foreach');
+let _replaceText = require('./libs/_replaceText');
+let _upperCaseFirst = require('./libs/_upperCaseFirst');
+let _extractRegion = require('./libs/_region');
+let _saveOrder = require('./libs/_orderSave');
+
+
 // let useragent = require('express-useragent');
 // db
 let admin = require('firebase-admin');
@@ -30,8 +40,13 @@ let timerGet = {
 	timeC : 0,
 	status : false,
 	lData : 0
-}
+};
 let timerGet1 = {
+	timeC : 0,
+	status : false,
+	lData : 0
+};
+let timerGet2 = {
 	timeC : 0,
 	status : false,
 	lData : 0
@@ -64,6 +79,7 @@ let access_data = {
 let usersDataDb = '';
 let allDataCustomer = '';
 let localMap = '';
+let paymentDb = '';
 
 let dirReplace = ''; // set __dirname
 
@@ -124,6 +140,10 @@ exports._setactivePort = function(){
 	usersDataDb = db.ref('users');
 	allDataCustomer = db.ref('customer');
 	localMap = db.ref('localMap');
+	paymentDb = db.ref('payment');
+
+	// let testDelete = db.ref('users/MsaXytEmXDNMHhrcwnYpoPJ3Pdy1/order');
+	// testDelete.set('');
 	// redis
 	clientRedis.on('connect', function() {
 		console.log('clientRedis connected');
@@ -185,6 +205,7 @@ app.get('/marketPlaceJobsApi', function(req,res){
   }else{
 	console.log('err marketPlaceJobsApi :: ');
 	self.redis = { key:redisOption.key, key2:redisOption.key2, val:redisOption.val, status:redisOption.status};
+	self.access = {};
 	viewDataCallbcak('marketplace-dna work',req,res);
   }
 });
@@ -192,6 +213,7 @@ app.get('/marketPlaceJobsApi', function(req,res){
 function getData(req,res,met,baseUrl,dataPost,where){
 	if(met == 'get'){
 		self.redis = { key:redisOption.key, key2:redisOption.key2, val:redisOption.val, status:redisOption.status};
+		self.access = {};
 		generateLocalMap();
 		let checkExist = false;
 		let dataTmpRedis = '';
@@ -199,7 +221,7 @@ function getData(req,res,met,baseUrl,dataPost,where){
 			if (result) {
 				console.log('GET result -> exist');
 					dataTmpRedis = JSON.parse(result);
-					checkExist = false;//true;
+					checkExist = true;//false;//
 					self.redis.status = 'update';
 			}else{
 				console.log('GET result -> not exist');
@@ -208,6 +230,7 @@ function getData(req,res,met,baseUrl,dataPost,where){
 			if(checkExist == true){
 				if(dataPost.pass == access_data.key && dataPost.met == access_data.met){
 					console.log('GET result checkExist -> exist '+where);
+					rolemembershipModify(dataTmpRedis.marketPlaceUser);
 					routeCalback(req,res,dataTmpRedis,where);
 				}else{
 					console.log('wrong access!');
@@ -222,7 +245,7 @@ function getData(req,res,met,baseUrl,dataPost,where){
 					let alldataCustomer = {};
 					usersDataDb.once("value", function(snapshot) {
 						allDataUsers_tmp = snapshot.val();
-						objectForeach(allDataUsers_tmp, function (v, k, obj) {
+						_foreach(allDataUsers_tmp, function (v, k, obj) {
 							if(v.marketplace){
 								tmp_dataMarket[k] = v;
 								if(!v.kategoriProduk){
@@ -246,6 +269,7 @@ function getData(req,res,met,baseUrl,dataPost,where){
 									customers : tmp_dataCustomer,
 									marketPlaceUser : tmp_dataMarket
 								};
+								rolemembershipModify(tmp_dataMarket);//req,res);
 								// res.send(postData);
 								routeCalback(req,res,postData,where);
 							}else{
@@ -303,6 +327,9 @@ function routeCalback(req,res,feedback,where){
 		if(feedback){
 			self.allData = feedback;
 			self.redis.val = feedback;
+			// rolemembershipModify(req,res);
+			// res.send(self);
+			// return;
 			generateAllDataMarket(req,res);
 		}else{
 			console.log('err routeCalback allData')
@@ -333,7 +360,7 @@ function generateAllDataMarket(req,res){
 	if(self.allData){
 		if(self.allData.marketPlaceUser){
 			let data = self.allData.marketPlaceUser;
-			objectForeach(data, function (val, prop, obj) {
+			_foreach(data, function (val, prop, obj) {
 				if(val.marketplace){
 					self.default.id.push(prop);
 					self.default.data[prop] = {};
@@ -341,10 +368,10 @@ function generateAllDataMarket(req,res){
 					// profile/brand data extract
 					if(val.identityBisnis){
 						self.default.data[prop].brand = {};
-						objectForeach(val.identityBisnis, function (val1, prop1, obj1) {
+						_foreach(val.identityBisnis, function (val1, prop1, obj1) {
 							if(val1){
 								self.default.data[prop][prop1] = {};
-								objectForeach(val1, function (val2, prop2, obj2) {
+								_foreach(val1, function (val2, prop2, obj2) {
 									if(val2.marketPlace){
 										self.default.data[prop][prop1][prop2] = val2;
 									}
@@ -354,9 +381,9 @@ function generateAllDataMarket(req,res){
 					}else{
 						console.log('tidak ada brand '+prop)
 						self.default.data[prop].brand = {};
-						objectForeach(val.supplier, function (val1, prop1, obj1) {
+						_foreach(val.supplier, function (val1, prop1, obj1) {
 							if(val1){
-								objectForeach(val1, function (val2, prop2, obj2) {
+								_foreach(val1, function (val2, prop2, obj2) {
 									if(val2){
 										self.default.data[prop].brand[prop2] = val2;
 									}
@@ -371,7 +398,7 @@ function generateAllDataMarket(req,res){
 						self.default.data[prop].produkList = [];
 						// self.default.data[prop].produkMarketplace = []; // for check produk exist
 						let x = 0;
-						objectForeach(val.produk, function (val1, prop1, obj1) {
+						_foreach(val.produk, function (val1, prop1, obj1) {
 							if(val1){
 								x++;//tmpCheckExistProduk.push({[prop1] : val1});
 								if(val1.marketPlace){
@@ -397,7 +424,7 @@ function generateAllDataMarket(req,res){
 					if(val.kategoriProduk){
 						self.default.data[prop].kategoriProduk = {};
 						let tmpCheckExistKtg = [];
-						objectForeach(val.kategoriProduk, function (val1, prop1, obj1) {
+						_foreach(val.kategoriProduk, function (val1, prop1, obj1) {
 							if(val1){
 								self.default.data[prop].kategoriProduk[prop1] = val1;
 								tmpCheckExistKtg.push({[prop1] : val1});
@@ -414,28 +441,28 @@ function generateAllDataMarket(req,res){
 					}
 					// marketPlace data extract
 					if(val.marketplace){
-						objectForeach(val.marketplace, function (val1, prop1, obj1) {
+						_foreach(val.marketplace, function (val1, prop1, obj1) {
 							if(val1){
 								self.default.data[prop]['account'+prop1] = [];
 								self.default.data[prop]['produkImport'+prop1] = [];
 								self.default.data[prop]['transaksiImport'+prop1] = [];
 								self.default.data[prop]['customerImport'+prop1] = [];
-								objectForeach(val1, function (val2, prop2, obj2) {
+								_foreach(val1, function (val2, prop2, obj2) {
 									if(prop2 == 'produkImport' || prop2 == 'transaksiImport' || prop2 == 'customerImport'){
 										if(prop2 == 'produkImport'){
-											objectForeach(val2, function (val3, prop3, obj3) {
+											_foreach(val2, function (val3, prop3, obj3) {
 												if(val3){
 													self.default.data[prop]['produkImport'+prop1].push(val3);
 												}
 											});
 										}else if(prop2 == 'transaksiImport'){
-											objectForeach(val2, function (val3, prop3, obj3) {
+											_foreach(val2, function (val3, prop3, obj3) {
 												if(val3){
 													self.default.data[prop]['transaksiImport'+prop1].push(val3);
 												}
 											});
 										}else if(prop2 == 'customerImport'){
-											objectForeach(val2, function (val3, prop3, obj3) {
+											_foreach(val2, function (val3, prop3, obj3) {
 												if(val3){
 													self.default.data[prop]['customerImport'+prop1].push(val3);
 												}
@@ -605,41 +632,41 @@ function generateAllDataMarket(req,res){
 };
 
 //object forech function
-function objectForeach(obj, callback) {
-    Object.keys(obj).forEach(function (prop) {
-        callback(obj[prop], prop, obj);
-    });
-    return obj;
-};
+// function objectForeach(obj, callback) {
+//     Object.keys(obj).forEach(function (prop) {
+//         callback(obj[prop], prop, obj);
+//     });
+//     return obj;
+// };
 
 //replace text 
-function replaceText(obj){
-	let replaceText = JSON.stringify(obj);
-	replaceText = replaceText.replace(/@_@/g, '/');
-	replaceText = replaceText.replace(/<br>/gi, " ");
-	replaceText = replaceText.replace(/<br\s\/>/gi, " ");
-	replaceText = replaceText.replace(/<br\/>/gi, " ");
-	replaceText = replaceText.replace(/<p[^>]*>/gi, " ");
-	replaceText = replaceText.replace(/<a.*href="(.*?)".*>(.*?)<\/a>/gi, " $2 ($1)");
-	replaceText = replaceText.replace(/<script.*>[\w\W]{1,}(.*?)[\w\W]{1,}<\/script>/gi, "");
-	replaceText = replaceText.replace(/<style.*>[\w\W]{1,}(.*?)[\w\W]{1,}<\/style>/gi, "");
-	replaceText = replaceText.replace(/<(?:.|\s)*?>/g, "");
-	replaceText = replaceText.replace(/(?:(?:\r\n|\r|\n)\s*){2,}/gim, " ");
-	replaceText = replaceText.replace(/ +(?= )/g,'');
-	replaceText = replaceText.replace(/&nbsp;/gi," ");
-	replaceText = replaceText.replace(/&amp;/gi,"&");
-	replaceText = replaceText.replace(/&quot;/gi,'"');
-	replaceText = replaceText.replace(/&lt;/gi,'<');
-	replaceText = replaceText.replace(/&gt;/gi,'>');
-	replaceText = replaceText.replace(/<\s*br\/*>/gi, " ");
-	replaceText = replaceText.replace(/<\s*a.*href="(.*?)".*>(.*?)<\/a>/gi, " $2 (Link->$1) ");
-	replaceText = replaceText.replace(/<\s*\/*.+?>/ig, " ");
-	replaceText = replaceText.replace(/ {2,}/gi, " ");
-	replaceText = replaceText.replace(/\n+\s*/gi, " ");
-	replaceText = replaceText.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
-	replaceText = JSON.parse(replaceText);
-	return replaceText;
-};
+// function replaceText(obj){
+// 	let replaceText = JSON.stringify(obj);
+// 	replaceText = replaceText.replace(/@_@/g, '/');
+// 	replaceText = replaceText.replace(/<br>/gi, " ");
+// 	replaceText = replaceText.replace(/<br\s\/>/gi, " ");
+// 	replaceText = replaceText.replace(/<br\/>/gi, " ");
+// 	replaceText = replaceText.replace(/<p[^>]*>/gi, " ");
+// 	replaceText = replaceText.replace(/<a.*href="(.*?)".*>(.*?)<\/a>/gi, " $2 ($1)");
+// 	replaceText = replaceText.replace(/<script.*>[\w\W]{1,}(.*?)[\w\W]{1,}<\/script>/gi, "");
+// 	replaceText = replaceText.replace(/<style.*>[\w\W]{1,}(.*?)[\w\W]{1,}<\/style>/gi, "");
+// 	replaceText = replaceText.replace(/<(?:.|\s)*?>/g, "");
+// 	replaceText = replaceText.replace(/(?:(?:\r\n|\r|\n)\s*){2,}/gim, " ");
+// 	replaceText = replaceText.replace(/ +(?= )/g,'');
+// 	replaceText = replaceText.replace(/&nbsp;/gi," ");
+// 	replaceText = replaceText.replace(/&amp;/gi,"&");
+// 	replaceText = replaceText.replace(/&quot;/gi,'"');
+// 	replaceText = replaceText.replace(/&lt;/gi,'<');
+// 	replaceText = replaceText.replace(/&gt;/gi,'>');
+// 	replaceText = replaceText.replace(/<\s*br\/*>/gi, " ");
+// 	replaceText = replaceText.replace(/<\s*a.*href="(.*?)".*>(.*?)<\/a>/gi, " $2 (Link->$1) ");
+// 	replaceText = replaceText.replace(/<\s*\/*.+?>/ig, " ");
+// 	replaceText = replaceText.replace(/ {2,}/gi, " ");
+// 	replaceText = replaceText.replace(/\n+\s*/gi, " ");
+// 	replaceText = replaceText.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+// 	replaceText = JSON.parse(replaceText);
+// 	return replaceText;
+// };
 
 
 function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
@@ -671,7 +698,7 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
 						if(_returns.status == true && _returns.data){
 							// console.log(_w+' '+_returns.data.length)
 							if(_returns.data.length > 0){
-								feedback = replaceText(_returns.data);
+								feedback = _replaceText(_returns.data);
 							}
 
 						}
@@ -769,7 +796,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w,UID){
 						if(_returns.status == true && _returns.data){
 							console.log(c+' '+_returns.data.length)
 							if(_returns.data.length > 0){
-								feedback = replaceText(_returns.data);
+								feedback = _replaceText(_returns.data);
 							}
 						}
 
@@ -872,7 +899,7 @@ function generateProduk(a,id,c,_w,allData,UID){
 	}
 
 	if(self.default.data[UID].brand){
-		objectForeach(self.default.data[UID].brand, function (v, k, obj) {
+		_foreach(self.default.data[UID].brand, function (v, k, obj) {
 			if(v.marketPlace){
 				if(v.marketPlace.id == id && v.marketPlace.marketPlace == _w){
 					getProfile = false;
@@ -902,7 +929,7 @@ function generateProduk(a,id,c,_w,allData,UID){
 					if(v){
 						if(v.id){
 							let jenisProduct = '';
-							let grosir = [];
+							let grosir = '';
 							let status = 'gudang';
 							let varianData = [];
 							let varianDataTmp = [];
@@ -920,6 +947,7 @@ function generateProduk(a,id,c,_w,allData,UID){
 							}
 							if(v.wholesale){
 								if(v.wholesale.length > 0){
+									grosir = [];
 									let mxP = 1;
 									for (let i = 0; i < v.wholesale.length; i++) {
 										if(mxP <= 4){
@@ -940,7 +968,7 @@ function generateProduk(a,id,c,_w,allData,UID){
 							}
 							if(v.product_sku){
 								if(v.product_sku.length > 0 ){
-									objectForeach(v.product_sku, function (vPprodSku, kPprodSku, obj) {
+									_foreach(v.product_sku, function (vPprodSku, kPprodSku, obj) {
 										varianData.push({
 											katalog: vPprodSku.images,
 											sku: v.id.toUpperCase()+'-V'+kPprodSku+'-'+vPprodSku.sku_name,
@@ -1041,7 +1069,7 @@ function generateProduk(a,id,c,_w,allData,UID){
 				if(feedback.length > 0){
 					if(a == 'produk'){
 						//check produk exist on database
-						objectForeach(feedback, function (v, k, obj) {
+						_foreach(feedback, function (v, k, obj) {
 							if(v.marketPlace.id_produk){
 								tOf = checkExistProduk(v,self.default.data[UID]['produkImport'+_w],_w);
 								if(tOf == false){
@@ -1105,7 +1133,7 @@ function checkKtg(data,where,UID,c,_w){
 	let uniqueNames =  [];
 	// let tmpCheckExistKtg = [];
 	if(data.length > 0){
-		objectForeach(data, function (v, k, obj) {
+		_foreach(data, function (v, k, obj) {
 			if(v.kategori){
 				ktg.push(v.kategori);
 			}
@@ -1115,7 +1143,7 @@ function checkKtg(data,where,UID,c,_w){
 	ktg = unique_array(ktg);
 
 	if(self.default.data[UID].kategoriProduk){
-		objectForeach(self.default.data[UID].kategoriProduk, function (v, k, obj) {
+		_foreach(self.default.data[UID].kategoriProduk, function (v, k, obj) {
 			if(v.kategori){
 				ktgArr.push(v.kategori.toLowerCase());
 				// tmpCheckExistKtg.push(v.kategori.toLowerCase());
@@ -1263,10 +1291,10 @@ function saveContinue(data,where,UID,c,_w){
 	// return;
 	if(data.length > 0){
 
-		objectForeach(data, function (v, k, obj) {
+		_foreach(data, function (v, k, obj) {
 			if(v.kategori){
 				if(self.default.data[UID].kategoriProduk){
-					objectForeach(self.default.data[UID].kategoriProduk, function (v1, k1, obj1) {
+					_foreach(self.default.data[UID].kategoriProduk, function (v1, k1, obj1) {
 						if(v1.kategori.toLowerCase() == v.kategori.toLowerCase()){
 							v.kategori = k1;
 						}
@@ -1296,7 +1324,8 @@ function saveContinue(data,where,UID,c,_w){
 							p : dataProduk,
 							c : 'newProduk',
 							d : dataConverUp,
-							_w : 'import_produk'
+							_w : 'import_produk',
+							access : self.access[UID].access
 						};
 						request.get({
 							headers: {'content-type': 'application/json'},
@@ -1393,7 +1422,7 @@ function checkExistProduk(dataCheck,dataForcheck,_w){
 		if(dataCheck.marketPlace.id_produk){
 			tOf = false;
 			if(dataForcheck.length > 0){
-				objectForeach(dataForcheck, function (v1, k, obj) {
+				_foreach(dataForcheck, function (v1, k, obj) {
 					if(v1.id_produk == dataCheck.marketPlace.id_produk){
 						tOf = true;
 					}
@@ -1426,6 +1455,10 @@ function extractTransaction(idMarket,c,_w,UID){
 	let expired = self.getdata[idGet][c].expired;
 	let refunded = self.getdata[idGet][c].refunded;
 	
+	callTime.getTransactionSellerFailed = false;
+	callTime.getTransactionSellerSuccess = false;
+	callTime.getCustomerBL = false;
+
 	self.getdata[idGet]['getTransactionSellerFailed'] = {valid:[],notValid:[]};//[];
 	self.getdata[idGet]['getTransactionSellerSuccess'] = {valid:[],notValid:[]};
 	self.getdata[idGet]['getTransactionBuyerFailed'] = {valid:[],notValid:[]};
@@ -1439,28 +1472,28 @@ function extractTransaction(idMarket,c,_w,UID){
 	let getCustomerBL = [];
 	
 	if(pending.length > 0){
-		objectForeach(pending, function (v, k, obj) {
+		_foreach(pending, function (v, k, obj) {
 			if(v){
 				getTransactionSellerFailed.push(v);
 			}
 		});
 	}
 	if(addressed.length > 0){
-		objectForeach(addressed, function (v, k, obj) {
+		_foreach(addressed, function (v, k, obj) {
 			if(v){
 				// getTransactionSellerFailed.push(v);
 			}
 		});
 	}
 	if(payment_chosen.length > 0){
-		objectForeach(payment_chosen, function (v, k, obj) {
+		_foreach(payment_chosen, function (v, k, obj) {
 			if(v){
 				getTransactionBuyerFailed.push(v);
 			}
 		});
 	}
 	if(confirm_payment.length > 0){
-		objectForeach(confirm_payment, function (v, k, obj) {
+		_foreach(confirm_payment, function (v, k, obj) {
 			if(v){
 				getTransactionSellerFailed.push(v);
 				getTransactionBuyerFailed.push(v);
@@ -1469,7 +1502,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(paid.length > 0){
-		objectForeach(paid, function (v, k, obj) {
+		_foreach(paid, function (v, k, obj) {
 			if(v){
 				getTransactionSellerSuccess.push(v);
 				getTransactionBuyerSuccess.push(v);
@@ -1478,7 +1511,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(delivered.length > 0){
-		objectForeach(delivered, function (v, k, obj) {
+		_foreach(delivered, function (v, k, obj) {
 			if(v){
 				getTransactionSellerSuccess.push(v);
 				getTransactionBuyerSuccess.push(v);
@@ -1487,7 +1520,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(received.length > 0){
-		objectForeach(received, function (v, k, obj) {
+		_foreach(received, function (v, k, obj) {
 			if(v){
 				getTransactionSellerSuccess.push(v);
 				getTransactionBuyerSuccess.push(v);
@@ -1496,7 +1529,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(remitted.length > 0){
-		objectForeach(remitted, function (v, k, obj) {
+		_foreach(remitted, function (v, k, obj) {
 			if(v){
 				getTransactionSellerSuccess.push(v);
 				getTransactionBuyerSuccess.push(v);
@@ -1505,7 +1538,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(rejected.length > 0){
-		objectForeach(rejected, function (v, k, obj) {
+		_foreach(rejected, function (v, k, obj) {
 			if(v){
 				getTransactionSellerFailed.push(v);
 				getTransactionBuyerFailed.push(v);
@@ -1514,7 +1547,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(cancelled.length > 0){
-		objectForeach(cancelled, function (v, k, obj) {
+		_foreach(cancelled, function (v, k, obj) {
 			if(v){
 				getTransactionSellerFailed.push(v);
 				getTransactionBuyerFailed.push(v);
@@ -1523,7 +1556,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(expired.length > 0){
-		objectForeach(expired, function (v, k, obj) {
+		_foreach(expired, function (v, k, obj) {
 			if(v){
 				getTransactionSellerFailed.push(v);
 				getTransactionBuyerFailed.push(v);
@@ -1532,7 +1565,7 @@ function extractTransaction(idMarket,c,_w,UID){
 		});
 	}
 	if(refunded.length > 0){
-		objectForeach(refunded, function (v, k, obj) {
+		_foreach(refunded, function (v, k, obj) {
 			if(v){
 				getTransactionSellerFailed.push(v);
 				getTransactionBuyerFailed.push(v);
@@ -1547,336 +1580,801 @@ function extractTransaction(idMarket,c,_w,UID){
 	self.getdata[idGet]['getTransactionBuyerSuccess'] = getTransactionBuyerSuccess;
 	self.getdata[idGet]['getCustomerBL'] = getCustomerBL;
 
+	
+	
 	if(getTransactionSellerFailed.length > 0){
-		dataHasilSeleksi = [];
-		// console.log('data dataHasilSeleksi before '+dataHasilSeleksi.length);
-		objectForeach(getTransactionSellerFailed, function (v, k, obj) {
-		if(v){
-			// console.log(k+' amount_details.length'+v.amount_details.length+' v.products '+v.products.length)
-			let pemesanan = {};
-			if(v.amount_details.length > 0){
-				pemesanan = {
-					asuransi: 0,
-					biayaLain: {
-						key: '',
-						val: 0,
-					},
-					diskon: {
-						key:'',
-						money:0,
-						percent:0
-					},
-					grandTotal:0,
-					jumlahBarang:0,
-					jumlahBobot:0,
-					jumlahItem:0,
-					ongkir:0,
-					subTotal:0,
-					tglOrder:{
-						date:v.created_at,
-						tmpDate:'' 
-					}
-				};
-				objectForeach(v.amount_details, function (v1, k1, obj1) {
-					if(v1.name == 'Harga Total Belanja'){
-						if(v1.amount){
-							pemesanan.subTotal = v1.amount
-						}
-					}else if(v1.name == 'Biaya Kurir'){
-						if(v1.amount){
-							pemesanan.ongkir = v1.amount
-						}
-					}else if(v1.name == 'Biaya Asuransi'){
-						if(v1.amount){
-							pemesanan.asuransi = v1.amount
-						}
-					}else if(v1.name == 'Kode Pembayaran'){
-						if(v1.amount){
-							if(pemesanan.biayaLain.val){
-								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
-								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
-							}else{
-								pemesanan.biayaLain.val = v1.amount;
-								pemesanan.biayaLain.key = v1.name;
-							}
-						}
-					}else if(v1.name == 'Biaya Administrasi'){
-						if(v1.amount){
-							if(pemesanan.biayaLain.val){
-								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
-								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
-							}else{
-								pemesanan.biayaLain.val = v1.amount;
-								pemesanan.biayaLain.key = v1.name;
-							}
-						}
-					}else if(v1.name == 'Tip untuk Pelapak'){
-						if(v1.amount){
-							if(pemesanan.biayaLain.val){
-								pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
-								pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
-							}else{
-								pemesanan.biayaLain.val = v1.amount;
-								pemesanan.biayaLain.key = v1.name;
-							}
-						}
-					}else if(v1.name == 'Diskon Metode Pembayaran'){
-						let diskTmp = 0;
-						if(v1.amount < 0){
-							diskTmp = 0 - parseInt(v1.amount);
-						}else{
-							diskTmp = v1.amount;
-						}
-						if(diskTmp){
-							if(pemesanan.diskon.money){
-								pemesanan.diskon.key = 'rp';
-								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
-								pemesanan.diskon.money = disTmp;
-								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
-							}else{
-								pemesanan.diskon.key = 'rp';
-								pemesanan.diskon.money = diskTmp,
-								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
-							}
-						}
-					}else if(v1.name == 'Potongan Voucher'){
-						let diskTmp = 0;
-						if(v1.amount < 0){
-							diskTmp = 0 - parseInt(v1.amount);
-						}else{
-							diskTmp = v1.amount;
-						}
-						if(diskTmp){
-							if(pemesanan.diskon.money){
-								pemesanan.diskon.key = 'rp';
-								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
-								pemesanan.diskon.money = disTmp;
-								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
-							}else{
-								pemesanan.diskon.key = 'rp';
-								pemesanan.diskon.money = diskTmp,
-								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
-							}
-						}
-					}else if(v1.name == 'Potongan Ongkir Pembeli Prioritas'){
-						let diskTmp = 0;
-						if(v1.amount < 0){
-							diskTmp = 0 - parseInt(v1.amount);
-						}else{
-							diskTmp = v1.amount;
-						}
-						if(diskTmp){
-							if(pemesanan.diskon.money){
-								pemesanan.diskon.key = 'rp';
-								let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
-								pemesanan.diskon.money = disTmp;
-								pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
-							}else{
-								pemesanan.diskon.key = 'rp';
-								pemesanan.diskon.money = diskTmp,
-								pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
-							}
-						}
-					}else if(v1.name == 'Total Pembayaran'){
-						let dmpTmp = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
-						if(v1.amount == dmpTmp){
-							pemesanan.grandTotal = v1.amount;
-						}else{
-							pemesanan.grandTotal = dmpTmp;
-						}
-					}
-				});
-			}
-			if(pemesanan.grandTotal && v.seller.id == idGet){
-				let dmpTot = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
-				
-				dataHasilSeleksi.push({
-					status :{
-						bayar:'',
-						lacak:'',
-						orderVia:'Website',
-						produk:'',
-						proses:'',
-						resi:''
-					},
-					ongkir:{
-						addAsal:'',
-						addTujuan:'',
-						asal:'',
-						berat:'',
-						description:'',
-						estimasi:'',
-						harga:'',
-						name_jasa:'',
-						paket_jasa:'',
-						resi:'',
-						statusOngkir:'',
-						tujuan:''
-					},
-					loyalty:{
-						point:0
-					},
-					note: v.buyer_notes,
-					total:{
-						pemesanan : pemesanan,
-						pembayaran : [{
-							bankAccount:{
-								idBank:'',
-								namaBank:'',
-								namaCabang:'',
-								name:'Virtual account '+_w.toLowerCase(),
-								noAkun:''
-							},
-							bayarVia:'bank',
-							cashBack:0,
-							idStaffInput:UID,
-							sisaBayar:0,
-							statusBayar:'',
-							tglBayar:{
-								date:new Date(v.state_changes.paid_at),
-								tmpDate:''
-							},
-							totalBayar:v.payment_amount
-						}],
-						orderVia:{
-							account:'http://www.'+_w.toLowerCase()+'.com/u/'+v.buyer.username,
-							link:'Website'
-						}
-					},
-					originOther:{
-						paymentMethod : v.payment_method,
-						paymentName : v.payment_method_name,
-						paymentDate : v.state_changes.paid_at,
-						paymentAmount : v.payment_amount,
-						paymentRemit : v.remit_amount,
-						paymentRefount : v.refund_amount,
-
-						ship : v.courier,
-						shipService : v.shipping_service,
-						shipping_code : v.shipping_code,
-						shipping_history : v.shipping_history,
-						shipping_fee : v.shipping_fee,
-						shipChoice : v.buyer_logistic_choice,
-						shipDelivered : v.state_changes.delivered_at,
-						shipReceived : v.state_changes.received_at,
-						shipBobot: v.total_weight,
-
-						created : v.created_at,
-						virtual : v.virtual,
-						note : v.buyer_notes,
-						created_on : v.created_on,
-						tagihan : dmpTot,
-						status : v.state
-					},
-					customer : {
-						add:v.consignee.address,
-						identity:{
-							address:{
-								city:{
-									id:'',
-									name:v.consignee.city
-								},
-								districts:{
-									id:'',
-									name:v.consignee.area
-								},
-								postalcode:v.consignee.post_code,
-								province:{
-									id:'',
-									name:v.consignee.province
-								},
-								street:v.consignee.address
-							},
-							contact:{
-								email:v.buyer.email,
-								facebookName:'',
-								instagram:'',
-								lineID:'',
-								phone:v.consignee.phone
-							},
-							alamat:v.consignee.address,
-							namaToko:v.buyer.name,
-							nama: v.buyer.name,
-							phone:v.consignee.phone,
-							date:new Date(),
-							gender:'',
-							idParentUser:UID,
-							idStaffInput:UID,
-							kategori:'Pelanggan',
-							username:v.buyer.username,
-							id:v.buyer.id
-						},
-						username:v.buyer.username,
-						ktg:'Pelanggan',
-						status: 'none'
-					},
-					supplier : v.seller,
-					produk : v.products,
-					marketPlace:{
-						url:'https://www.bukalapak.com/payment/transactions/'+v.id,
-						id:v.id,
-						invoice:v.invoice,
-						transaction_id:v.transaction_id
-					},
-
-				});
-			}
-		}
-		});
-		console.log(getTransactionSellerFailed.length+'getTransactionSellerFailed data dataHasilSeleksi '+dataHasilSeleksi.length);
-		if(dataHasilSeleksi.length > 0){
-			let dataNotValidOrValid = {
-				valid:[],
-				notValid:[]
-			};
-			
-			objectForeach(dataHasilSeleksi, function (v, k, obj) {
-				if(v){
-					if(v.produk.length > 0){
-						objectForeach(v.produk, function (vProd, kProd, obj1){
-							if(vProd.id){
-								let cSama = false;
-								if(self.default.data[UID].produkList.length > 0){
-									objectForeach(self.default.data[UID].produkList, function (vLp, kLp, obj2){
-										if(vLp.id_produk == vProd.id){
-											cSama = true;
-											dataNotValidOrValid.valid.push(vProd);
-										}
-									});
-								}
-								if(cSama == false){
-									dataNotValidOrValid.notValid.push(vProd);
-								}
-							}
-						});
-					}
-				}
-			});
-			self.getdata[idGet]['getTransactionSellerFailed'] = dataNotValidOrValid;
-			generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idGet);
-		}else{
-			console.log('else')
-			callTime.getTransaction = true;
-		}
-	}else if(getTransactionSellerSuccess.length > 0){
-		callTime.getTransaction = true;
-	}else if(getTransactionBuyerFailed.length > 0){
-		callTime.getTransaction = true;
-	}else if(getTransactionBuyerSuccess.length > 0){
-		callTime.getTransaction = true;
-	}else if(getCustomerBL.length > 0){
-		callTime.getTransaction = true;
-	}else{
-		console.log('all else')
-		callTime.getTransaction = true;
+		callTime.getTransactionSellerFailed = true;
+	}
+	if(getTransactionSellerSuccess.length > 0){
+		callTime.getTransactionSellerSuccess = true;
+	}
+	if(getCustomerBL.length > 0){
+		callTime.getCustomerBL = true;
 	}
 
 
-	// callTime.getTransaction = true;
+	timerGet2.get = 0;
+	// all false
+	if(callTime.getTransactionSellerFailed == false && callTime.getTransactionSellerSuccess == false && callTime.getCustomerBL == false){
+		timerGet2.get = 0;
+	}
+	// all true
+	if(callTime.getTransactionSellerFailed == true && callTime.getTransactionSellerSuccess == true && callTime.getCustomerBL == true){
+		timerGet2.get = 3;
+	}
+
+	if(callTime.getTransactionSellerFailed == true && callTime.getTransactionSellerSuccess == false && callTime.getCustomerBL == false){
+		// hanya getTransactionSellerFailed
+		timerGet2.get = 1;
+	}
+	if(callTime.getTransactionSellerFailed == false && callTime.getTransactionSellerSuccess == true && callTime.getCustomerBL == false){
+		// hanya getTransactionSellerSuccess
+		timerGet2.get = 2;
+	}
+	if(callTime.getTransactionSellerFailed == false && callTime.getTransactionSellerSuccess == false && callTime.getCustomerBL == true){
+		// hanya getCustomerBL
+		timerGet2.get = 3;
+	}
+
+	if(timerGet2.get > 0 ){
+		timerGet2.status = true;
+		setTimeout(function pushTransaction(){
+			if(timerGet2.status == true){
+				timerGet2.status = false;
+				if(timerGet2.get == 3){
+					// execute getCustomerBL
+					if(callTime.getCustomerBL == true){
+						if(getCustomerBL.length > 0){
+							dataHasilSeleksi = [];
+							_foreach(getCustomerBL, function(v, k, o){
+								dataHasilSeleksi.push({
+									customer : {
+										add:v.consignee.address,
+										identity:{
+											address:{
+												city:{
+													id:'',
+													name:v.consignee.city
+												},
+												districts:{
+													id:'',
+													name:v.consignee.area
+												},
+												postalcode:v.consignee.post_code,
+												province:{
+													id:'',
+													name:v.consignee.province
+												},
+												street:v.consignee.address
+											},
+											contact:{
+												email:v.buyer.email,
+												facebookName:'',
+												instagram:'',
+												lineID:'',
+												phone:v.consignee.phone
+											},
+											alamat:v.consignee.address,
+											namaToko:v.buyer.name,
+											nama: v.buyer.name,
+											phone:v.consignee.phone,
+											date:new Date(),
+											gender:'',
+											idParentUser:UID,
+											idStaffInput:UID,
+											kategori:'Pelanggan',
+											username:v.buyer.username,
+											id:v.buyer.id
+										},
+										username:v.buyer.username,
+										ktg:'Pelanggan',
+										status: 'none'
+									}
+								});
+							});
+							console.log('dataHasilSeleksi '+dataHasilSeleksi.length)
+							// self.extractCustomerTransaction(dataHasilSeleksi,a);
+							// generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idMarket);
+							// synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket);
+							// extractCustomerTransaction(dataHasilSeleksi,'transaksi',UID,_w,idMarket);
+							if(dataHasilSeleksi.length > 0){
+								extractCustomerTransaction(dataHasilSeleksi,'getCustomerBL',UID,_w,idMarket);
+							}else{
+								timerGet2.get--;
+								timerGet2.status = true;
+							}
+						}else{
+							timerGet2.get--;
+							timerGet2.status = true;
+						}
+						console.log('done getCustomerBL');
+					}else{
+						timerGet2.get--;
+						timerGet2.status = true;
+					}
+				}else if(timerGet2.get == 2){
+					// execute getTransactionSellerSuccess
+					if(callTime.getTransactionSellerSuccess == true){
+						if(getTransactionSellerSuccess.length > 0){
+							dataHasilSeleksi = [];
+							_foreach(getTransactionSellerSuccess, function (v, k, obj) {
+								if(v){
+									let pemesanan = {};
+									if(v.amount_details.length > 0){
+										pemesanan = {
+											asuransi: 0,
+											biayaLain: {
+												key: '',
+												val: 0,
+											},
+											diskon: {
+												key:'',
+												money:0,
+												percent:0
+											},
+											grandTotal:0,
+											jumlahBarang:0,
+											jumlahBobot:0,
+											jumlahItem:0,
+											ongkir:0,
+											subTotal:0,
+											tglOrder:{
+												date:v.created_at,
+												tmpDate:'' 
+											}
+										};
+										_foreach(v.amount_details, function (v1, k1, obj1) {
+											if(v1.name == 'Harga Total Belanja'){
+												if(v1.amount){
+													pemesanan.subTotal = v1.amount
+												}
+											}else if(v1.name == 'Biaya Kurir'){
+												if(v1.amount){
+													pemesanan.ongkir = v1.amount
+												}
+											}else if(v1.name == 'Biaya Asuransi'){
+												if(v1.amount){
+													pemesanan.asuransi = v1.amount
+												}
+											}else if(v1.name == 'Kode Pembayaran'){
+												if(v1.amount){
+													if(pemesanan.biayaLain.val){
+														pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+														pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+													}else{
+														pemesanan.biayaLain.val = v1.amount;
+														pemesanan.biayaLain.key = v1.name;
+													}
+												}
+											}else if(v1.name == 'Biaya Administrasi'){
+												if(v1.amount){
+													if(pemesanan.biayaLain.val){
+														pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+														pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+													}else{
+														pemesanan.biayaLain.val = v1.amount;
+														pemesanan.biayaLain.key = v1.name;
+													}
+												}
+											}else if(v1.name == 'Tip untuk Pelapak'){
+												if(v1.amount){
+													if(pemesanan.biayaLain.val){
+														pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+														pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+													}else{
+														pemesanan.biayaLain.val = v1.amount;
+														pemesanan.biayaLain.key = v1.name;
+													}
+												}
+											}else if(v1.name == 'Diskon Metode Pembayaran'){
+												let diskTmp = 0;
+												if(v1.amount < 0){
+													diskTmp = 0 - parseInt(v1.amount);
+												}else{
+													diskTmp = v1.amount;
+												}
+												if(diskTmp){
+													if(pemesanan.diskon.money){
+														pemesanan.diskon.key = 'rp';
+														let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+														pemesanan.diskon.money = disTmp;
+														pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}else{
+														pemesanan.diskon.key = 'rp';
+														pemesanan.diskon.money = diskTmp,
+														pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}
+												}
+											}else if(v1.name == 'Potongan Voucher'){
+												let diskTmp = 0;
+												if(v1.amount < 0){
+													diskTmp = 0 - parseInt(v1.amount);
+												}else{
+													diskTmp = v1.amount;
+												}
+												if(diskTmp){
+													if(pemesanan.diskon.money){
+														pemesanan.diskon.key = 'rp';
+														let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+														pemesanan.diskon.money = disTmp;
+														pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}else{
+														pemesanan.diskon.key = 'rp';
+														pemesanan.diskon.money = diskTmp,
+														pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}
+												}
+											}else if(v1.name == 'Potongan Ongkir Pembeli Prioritas'){
+												let diskTmp = 0;
+												if(v1.amount < 0){
+													diskTmp = 0 - parseInt(v1.amount);
+												}else{
+													diskTmp = v1.amount;
+												}
+												if(diskTmp){
+													if(pemesanan.diskon.money){
+														pemesanan.diskon.key = 'rp';
+														let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+														pemesanan.diskon.money = disTmp;
+														pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}else{
+														pemesanan.diskon.key = 'rp';
+														pemesanan.diskon.money = diskTmp,
+														pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}
+												}
+											}else if(v1.name == 'Total Pembayaran'){
+												let dmpTmp = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+												if(v1.amount == dmpTmp){
+													pemesanan.grandTotal = v1.amount;
+												}else{
+													pemesanan.grandTotal = dmpTmp;
+												}
+											}
+										});
+									}
+									if(pemesanan.grandTotal && v.seller.id == idGet){
+										let dmpTot = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+										
+										dataHasilSeleksi.push({
+											status :{
+												bayar:'',
+												lacak:'',
+												orderVia:'Website',
+												produk:'',
+												proses:'',
+												resi:''
+											},
+											ongkir:{
+												addAsal:'',
+												addTujuan:'',
+												asal:'',
+												berat:'',
+												description:'',
+												estimasi:'',
+												harga:'',
+												name_jasa:'',
+												paket_jasa:'',
+												resi:'',
+												statusOngkir:'',
+												tujuan:''
+											},
+											loyalty:{
+												point:0
+											},
+											note: v.buyer_notes,
+											total:{
+												pemesanan : pemesanan,
+												pembayaran : [{
+													bankAccount:{
+														idBank:'',
+														namaBank:'',
+														namaCabang:'',
+														name:'Virtual account '+_w.toLowerCase(),
+														noAkun:''
+													},
+													bayarVia:'bank',
+													cashBack:0,
+													idStaffInput:UID,
+													sisaBayar:0,
+													statusBayar:'',
+													tglBayar:{
+														date:new Date(v.state_changes.paid_at),
+														tmpDate:''
+													},
+													totalBayar:v.payment_amount
+												}],
+												orderVia:{
+													account:'http://www.'+_w.toLowerCase()+'.com/u/'+v.buyer.username,
+													link:'Website'
+												}
+											},
+											originOther:{
+												paymentMethod : v.payment_method,
+												paymentName : v.payment_method_name,
+												paymentDate : v.state_changes.paid_at,
+												paymentAmount : v.payment_amount,
+												paymentRemit : v.remit_amount,
+												paymentRefount : v.refund_amount,
+					
+												ship : v.courier,
+												shipService : v.shipping_service,
+												shipping_code : v.shipping_code,
+												shipping_history : v.shipping_history,
+												shipping_fee : v.shipping_fee,
+												shipChoice : v.buyer_logistic_choice,
+												shipDelivered : (v.state_changes.delivered_at || ''),
+												shipReceived : (v.state_changes.received_at || ''),
+												shipBobot: v.total_weight,
+					
+												created : v.created_at,
+												virtual : v.virtual,
+												note : v.buyer_notes,
+												created_on : v.created_on,
+												tagihan : dmpTot,
+												status : v.state
+											},
+											customer : {
+												add:v.consignee.address,
+												identity:{
+													address:{
+														city:{
+															id:'',
+															name:v.consignee.city
+														},
+														districts:{
+															id:'',
+															name:v.consignee.area
+														},
+														postalcode:v.consignee.post_code,
+														province:{
+															id:'',
+															name:v.consignee.province
+														},
+														street:v.consignee.address
+													},
+													contact:{
+														email:v.buyer.email,
+														facebookName:'',
+														instagram:'',
+														lineID:'',
+														phone:v.consignee.phone
+													},
+													alamat:v.consignee.address,
+													namaToko:v.buyer.name,
+													nama: v.buyer.name,
+													phone:v.consignee.phone,
+													date:new Date(),
+													gender:'',
+													idParentUser:UID,
+													idStaffInput:UID,
+													kategori:'Pelanggan',
+													username:v.buyer.username,
+													id:v.buyer.id
+												},
+												username:v.buyer.username,
+												ktg:'Pelanggan',
+												status: 'none'
+											},
+											supplier : v.seller,
+											produk : v.products,
+											marketPlace:{
+												url:'https://www.bukalapak.com/payment/transactions/'+v.id,
+												id:v.id,
+												invoice:v.invoice,
+												transaction_id:v.transaction_id
+											},
+					
+										});
+									}
+								}
+							});
+							console.log(getTransactionSellerSuccess.length+' getTransactionSellerSuccess data dataHasilSeleksi '+dataHasilSeleksi.length);
+							if(dataHasilSeleksi.length > 0){
+								let dataNotValidOrValid = {
+									valid:[],
+									notValid:[]
+								};
+								
+								_foreach(dataHasilSeleksi, function (v, k, obj) {
+									if(v){
+										if(v.produk.length > 0){
+											_foreach(v.produk, function (vProd, kProd, obj1){
+												if(vProd.id){
+													let cSama = false;
+													if(self.default.data[UID].produkList.length > 0){
+														_foreach(self.default.data[UID].produkList, function (vLp, kLp, obj2){
+															if(vLp.id_produk == vProd.id){
+																cSama = true;
+																dataNotValidOrValid.valid.push(vProd);
+															}
+														});
+													}
+													if(cSama == false){
+														dataNotValidOrValid.notValid.push(vProd);
+													}
+												}
+											});
+										}
+									}
+								});
+								self.getdata[idGet]['getTransactionSellerSuccess'] = dataNotValidOrValid;
+								generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idMarket);
+							}else{
+								console.log('else getTransactionSellerSuccess')
+								// callTime.getTransaction = true;
+								timerGet2.get--;
+								timerGet2.status = true;
+							}
+						}else{
+							timerGet2.get--;
+							timerGet2.status = true;
+						}
+						console.log('done getTransactionSellerSuccess');
+					}else{
+						timerGet2.get--;
+						timerGet2.status = true;
+					}
+				}else if(timerGet2.get == 1){
+					// execute getTransactionSellerFailed
+					if(callTime.getTransactionSellerFailed == true){
+						if(getTransactionSellerFailed.length > 0){
+							dataHasilSeleksi = [];
+							_foreach(getTransactionSellerFailed, function (v, k, obj) {
+								if(v){
+									let pemesanan = {};
+									if(v.amount_details.length > 0){
+										pemesanan = {
+											asuransi: 0,
+											biayaLain: {
+												key: '',
+												val: 0,
+											},
+											diskon: {
+												key:'',
+												money:0,
+												percent:0
+											},
+											grandTotal:0,
+											jumlahBarang:0,
+											jumlahBobot:0,
+											jumlahItem:0,
+											ongkir:0,
+											subTotal:0,
+											tglOrder:{
+												date:v.created_at,
+												tmpDate:'' 
+											}
+										};
+										_foreach(v.amount_details, function (v1, k1, obj1) {
+											if(v1.name == 'Harga Total Belanja'){
+												if(v1.amount){
+													pemesanan.subTotal = v1.amount
+												}
+											}else if(v1.name == 'Biaya Kurir'){
+												if(v1.amount){
+													pemesanan.ongkir = v1.amount
+												}
+											}else if(v1.name == 'Biaya Asuransi'){
+												if(v1.amount){
+													pemesanan.asuransi = v1.amount
+												}
+											}else if(v1.name == 'Kode Pembayaran'){
+												if(v1.amount){
+													if(pemesanan.biayaLain.val){
+														pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+														pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+													}else{
+														pemesanan.biayaLain.val = v1.amount;
+														pemesanan.biayaLain.key = v1.name;
+													}
+												}
+											}else if(v1.name == 'Biaya Administrasi'){
+												if(v1.amount){
+													if(pemesanan.biayaLain.val){
+														pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+														pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+													}else{
+														pemesanan.biayaLain.val = v1.amount;
+														pemesanan.biayaLain.key = v1.name;
+													}
+												}
+											}else if(v1.name == 'Tip untuk Pelapak'){
+												if(v1.amount){
+													if(pemesanan.biayaLain.val){
+														pemesanan.biayaLain.val = pemesanan.biayaLain.val + v1.amount;
+														pemesanan.biayaLain.key = pemesanan.biayaLain.key+' & '+v1.name;
+													}else{
+														pemesanan.biayaLain.val = v1.amount;
+														pemesanan.biayaLain.key = v1.name;
+													}
+												}
+											}else if(v1.name == 'Diskon Metode Pembayaran'){
+												let diskTmp = 0;
+												if(v1.amount < 0){
+													diskTmp = 0 - parseInt(v1.amount);
+												}else{
+													diskTmp = v1.amount;
+												}
+												if(diskTmp){
+													if(pemesanan.diskon.money){
+														pemesanan.diskon.key = 'rp';
+														let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+														pemesanan.diskon.money = disTmp;
+														pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}else{
+														pemesanan.diskon.key = 'rp';
+														pemesanan.diskon.money = diskTmp,
+														pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}
+												}
+											}else if(v1.name == 'Potongan Voucher'){
+												let diskTmp = 0;
+												if(v1.amount < 0){
+													diskTmp = 0 - parseInt(v1.amount);
+												}else{
+													diskTmp = v1.amount;
+												}
+												if(diskTmp){
+													if(pemesanan.diskon.money){
+														pemesanan.diskon.key = 'rp';
+														let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+														pemesanan.diskon.money = disTmp;
+														pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}else{
+														pemesanan.diskon.key = 'rp';
+														pemesanan.diskon.money = diskTmp,
+														pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}
+												}
+											}else if(v1.name == 'Potongan Ongkir Pembeli Prioritas'){
+												let diskTmp = 0;
+												if(v1.amount < 0){
+													diskTmp = 0 - parseInt(v1.amount);
+												}else{
+													diskTmp = v1.amount;
+												}
+												if(diskTmp){
+													if(pemesanan.diskon.money){
+														pemesanan.diskon.key = 'rp';
+														let disTmp = parseInt(pemesanan.diskon.money)+parseInt(diskTmp);
+														pemesanan.diskon.money = disTmp;
+														pemesanan.diskon.percent = (parseInt(disTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}else{
+														pemesanan.diskon.key = 'rp';
+														pemesanan.diskon.money = diskTmp,
+														pemesanan.diskon.percent = (parseInt(diskTmp) / parseInt(pemesanan.subTotal)) * 100;
+													}
+												}
+											}else if(v1.name == 'Total Pembayaran'){
+												let dmpTmp = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+												if(v1.amount == dmpTmp){
+													pemesanan.grandTotal = v1.amount;
+												}else{
+													pemesanan.grandTotal = dmpTmp;
+												}
+											}
+										});
+									}
+									if(pemesanan.grandTotal && v.seller.id == idGet){
+										let dmpTot = (pemesanan.subTotal + pemesanan.asuransi + pemesanan.biayaLain.val +pemesanan.ongkir)-(pemesanan.diskon.money);
+										
+										dataHasilSeleksi.push({
+											status :{
+												bayar:'',
+												lacak:'',
+												orderVia:'Website',
+												produk:'',
+												proses:'',
+												resi:''
+											},
+											ongkir:{
+												addAsal:'',
+												addTujuan:'',
+												asal:'',
+												berat:'',
+												description:'',
+												estimasi:'',
+												harga:'',
+												name_jasa:'',
+												paket_jasa:'',
+												resi:'',
+												statusOngkir:'',
+												tujuan:''
+											},
+											loyalty:{
+												point:0
+											},
+											note: v.buyer_notes,
+											total:{
+												pemesanan : pemesanan,
+												pembayaran : [{
+													bankAccount:{
+														idBank:'',
+														namaBank:'',
+														namaCabang:'',
+														name:'Virtual account '+_w.toLowerCase(),
+														noAkun:''
+													},
+													bayarVia:'bank',
+													cashBack:0,
+													idStaffInput:UID,
+													sisaBayar:0,
+													statusBayar:'',
+													tglBayar:{
+														date:new Date(v.state_changes.paid_at),
+														tmpDate:''
+													},
+													totalBayar:v.payment_amount
+												}],
+												orderVia:{
+													account:'http://www.'+_w.toLowerCase()+'.com/u/'+v.buyer.username,
+													link:'Website'
+												}
+											},
+											originOther:{
+												paymentMethod : v.payment_method,
+												paymentName : v.payment_method_name,
+												paymentDate : v.state_changes.paid_at,
+												paymentAmount : v.payment_amount,
+												paymentRemit : v.remit_amount,
+												paymentRefount : v.refund_amount,
+
+												ship : v.courier,
+												shipService : v.shipping_service,
+												shipping_code : v.shipping_code,
+												shipping_history : v.shipping_history,
+												shipping_fee : v.shipping_fee,
+												shipChoice : v.buyer_logistic_choice,
+												shipDelivered : (v.state_changes.delivered_at || ''),
+												shipReceived : (v.state_changes.received_at || ''),
+												shipBobot: v.total_weight,
+
+												created : v.created_at,
+												virtual : v.virtual,
+												note : v.buyer_notes,
+												created_on : v.created_on,
+												tagihan : dmpTot,
+												status : v.state
+											},
+											customer : {
+												add:v.consignee.address,
+												identity:{
+													address:{
+														city:{
+															id:'',
+															name:v.consignee.city
+														},
+														districts:{
+															id:'',
+															name:v.consignee.area
+														},
+														postalcode:v.consignee.post_code,
+														province:{
+															id:'',
+															name:v.consignee.province
+														},
+														street:v.consignee.address
+													},
+													contact:{
+														email:v.buyer.email,
+														facebookName:'',
+														instagram:'',
+														lineID:'',
+														phone:v.consignee.phone
+													},
+													alamat:v.consignee.address,
+													namaToko:v.buyer.name,
+													nama: v.buyer.name,
+													phone:v.consignee.phone,
+													date:new Date(),
+													gender:'',
+													idParentUser:UID,
+													idStaffInput:UID,
+													kategori:'Pelanggan',
+													username:v.buyer.username,
+													id:v.buyer.id
+												},
+												username:v.buyer.username,
+												ktg:'Pelanggan',
+												status: 'none'
+											},
+											supplier : v.seller,
+											produk : v.products,
+											marketPlace:{
+												url:'https://www.bukalapak.com/payment/transactions/'+v.id,
+												id:v.id,
+												invoice:v.invoice,
+												transaction_id:v.transaction_id
+											},
+
+										});
+									}
+								}
+							});
+							console.log(getTransactionSellerFailed.length+' getTransactionSellerFailed data dataHasilSeleksi '+dataHasilSeleksi.length);
+							if(dataHasilSeleksi.length > 0){
+								let dataNotValidOrValid = {
+									valid:[],
+									notValid:[]
+								};
+								
+								_foreach(dataHasilSeleksi, function (v, k, obj) {
+									if(v){
+										if(v.produk.length > 0){
+											_foreach(v.produk, function (vProd, kProd, obj1){
+												if(vProd.id){
+													let cSama = false;
+													if(self.default.data[UID].produkList.length > 0){
+														_foreach(self.default.data[UID].produkList, function (vLp, kLp, obj2){
+															if(vLp.id_produk == vProd.id){
+																cSama = true;
+																dataNotValidOrValid.valid.push(vProd);
+															}
+														});
+													}
+													if(cSama == false){
+														dataNotValidOrValid.notValid.push(vProd);
+													}
+												}
+											});
+										}
+									}
+								});
+								self.getdata[idGet]['getTransactionSellerFailed'] = dataNotValidOrValid;
+								generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idMarket);
+							}else{
+								console.log('else getTransactionSellerFailed')
+								// callTime.getTransaction = true;
+								timerGet2.get--;
+								timerGet2.status = true;
+							}
+						}else{
+							timerGet2.get--;
+							timerGet2.status = true;
+						}
+						console.log('done getTransactionSellerFailed');
+					}else{
+						timerGet2.get--;
+						timerGet2.status = true;
+					}
+				}else{
+					// done
+					timerGet2.status = false;
+					console.log('done load');
+					// callTime.getTransaction = true;
+				}
+				setTimeout(pushTransaction,0);
+			}else{
+				if(timerGet2.get > 0 && timerGet2.status == false){
+					setTimeout(pushTransaction,0);
+				}else{
+					console.log('finish load');
+					callTime.getTransaction = true;
+					// setTimeout(pushTransaction,0);
+				}
+			}
+		},0);
+	}else{
+		console.log('tidak ada ',timerGet2.get);
+		callTime.getTransaction = true;
+	}	
+	console.log('timerGet2 ',timerGet2)
+	
+	if(getTransactionBuyerFailed.length > 0){
+		// callTime.getTransaction = true;
+	}
+	if(getTransactionBuyerSuccess.length > 0){
+		// callTime.getTransaction = true;
+	}
+	if(getCustomerBL.length > 0){
+		// callTime.getTransaction = true;
+	}
 };
 
-function generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idGet){
-	console.log('generateProdukTransaction')
+function generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idMarket){
+	let idGet = idMarket.i;
+	// console.log('generateProdukTransaction')
 	// self.regulasiData.allData = [];
 	// let allData = [];
 	// self.regulasiData.dataList = [];
@@ -1905,7 +2403,7 @@ function generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,i
 							setTimeout(autoPutProduk, 0);
 						}
 					}else{
-						synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet);
+						synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket);
 					}
 				},0);
 			}else{
@@ -1913,19 +2411,20 @@ function generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,i
 			}
 		},0);
 	}else{
-		synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet);
+		synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket);
 	}
 };
 
-function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet){
-	console.log('synceProdukMarketPlaceInvent '+dataHasilSeleksi.length+' data produk list '+self.default.data[UID].produkList.length)
+function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket){
+	let idGet = idMarket.i;
+	// console.log('synceProdukMarketPlaceInvent '+dataHasilSeleksi.length+' data produk list '+self.default.data[UID].produkList.length)
 	if(dataHasilSeleksi.length > 0 && self.default.data[UID].produkList.length > 0){
 		let idOrigin = [];
 		let	idInvent = [];
 		let	arrSama = [];
-		objectForeach(dataHasilSeleksi, function (val, key, obj){
+		_foreach(dataHasilSeleksi, function (val, key, obj){
 			if(val.produk.length > 0){
-				objectForeach(val.produk, function (vProd, kProd, obj1){
+				_foreach(val.produk, function (vProd, kProd, obj1){
 					if(vProd.id){
 						idOrigin.push(vProd.id);
 					}
@@ -1934,7 +2433,7 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet){
 		});
 		idOrigin = unique_array(idOrigin);
 
-		objectForeach(self.default.data[UID].produkList, function (val, key, obj){
+		_foreach(self.default.data[UID].produkList, function (val, key, obj){
 			arrSama = []; 
 			if(val.id_produk){
 				arrSama.push(val.id_produk); 
@@ -1945,19 +2444,20 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet){
 				}; 
 			}
 		});
-		console.log('idOrigin after '+idOrigin.length+' idInvent '+idInvent.length)
+		// console.log('idOrigin after '+idOrigin.length+' idInvent '+idInvent.length)
 		let dataToPush = [];
 		let continueListProduk = false;
 		let prductTmp = [];
-		objectForeach(dataHasilSeleksi, function (v, k, obj){
+		let grosir = '';
+		_foreach(dataHasilSeleksi, function (v, k, obj){
 			if(v.produk.length > 0){
 				prductTmp = v.produk;
 				let replaceProduk = false;
 				dataToPush = [];
-				objectForeach(prductTmp, function (vProd,kProd, obj1){
+				_foreach(prductTmp, function (vProd,kProd, obj1){
 					if(vProd.id){
 						if(idInvent.length > 0){
-							objectForeach(idInvent, function (vLp,kLp, obj2){
+							_foreach(idInvent, function (vLp,kLp, obj2){
 								if(vLp.id_produk == vProd.id){
 									replaceProduk = true;
 									continueListProduk = true;
@@ -1975,6 +2475,9 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet){
 									if(vLp.data_detail.varian[_ltmp].description){
 										_name = vLp.data_detail.nama+' '+vLp.data_detail.varian[_ltmp].description;
 									}
+									if(vLp.data_detail.grosir){
+										grosir = vLp.data_detail.grosir;
+									}
 									let _total = parseInt(vProd.price)*parseInt(vProd.order_quantity);
 									dataToPush.push({
 										id:vLp.id,
@@ -1985,7 +2488,7 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet){
 										sku:vLp.data_detail.marketPlace.varian[_ltmp].sku_replace,
 										berat:vProd.weight,
 										diskon:'-',
-										grosir:vLp.data_detail.grosir,
+										grosir:grosir,
 										keterangan:'reguler',
 										nama:_name,
 										harga_beli:parseInt(vLp.data_detail.varian[_ltmp].harga_beli),
@@ -2030,12 +2533,12 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet){
 						let id_tmpOrigin = [];
 						let arrSama1 = [];
 						let hasil_tmp = [];
-						objectForeach(prductTmp, function (vTmp,kTmp, obj1){
+						_foreach(prductTmp, function (vTmp,kTmp, obj1){
 							if(vTmp.id){
 								id_tmpOrigin.push(vTmp.id);
 							}
 						});
-						objectForeach(dataToPush, function (vTmp,kTmp, obj1){
+						_foreach(dataToPush, function (vTmp,kTmp, obj1){
 							if(vTmp.marketPlace){
 								arrSama1 = [];
 								let data = vTmp.marketPlace;
@@ -2059,22 +2562,24 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idGet){
 			}
 		});
 		if(continueListProduk == true){
-			extractCustomerTransaction(dataHasilSeleksi,'transaksi',UID,_w,idGet);
+			extractCustomerTransaction(dataHasilSeleksi,'transaksi',UID,_w,idMarket);
 		}else{
 			console.log('err :: synceProdukMarketPlaceInvent '+UID)
-			callTime.getTransaction = true;
+			// callTime.getTransaction = true;
+			timerGet2.get--;
+			timerGet2.status = true;
 		}
 	}
 };
 
-function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
+function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 	if(dataHasilSeleksi.length > 0 && (where == 'transaksi' || where == 'getCustomerBL') && self.allData.customers.length > 0){
-		console.log('extractCustomerTransaction if')
+		console.log('extractCustomerTransaction if '+where)
 		let emailOrigin = [];
 		let phoneOrigin = [];
 		let customerOrigin = [];
 		let unikMailPhone = [];
-		objectForeach(dataHasilSeleksi, function (val,key, obj1){
+		_foreach(dataHasilSeleksi, function (val,key, obj1){
 			if(val.customer.identity.contact){
 				let data = val.customer.identity.contact;
 				if(data.email){
@@ -2086,10 +2591,12 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 				customerOrigin.push(val.customer);
 			}
 		});
+		console.log('emailOrigin before '+emailOrigin.length)
 		emailOrigin = unique_array(emailOrigin);
+		console.log('phoneOrigin before '+phoneOrigin.length)
 		phoneOrigin = unique_array(phoneOrigin);
 		console.log('emailOrigin after '+emailOrigin.length+' phoneOrigin after '+phoneOrigin.length)
-		objectForeach(self.allData.customers, function (val,key, obj1){
+		_foreach(self.allData.customers, function (val,key, obj1){
 			if(val){
 				let arrSama1 = [];
 				let arrSama2 = [];
@@ -2123,7 +2630,8 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 			let arrSama1 = [];
 			let arrSama2 = [];
 			let checkMailPhone = false;
-			objectForeach(self.allData.customers, function (v, k, obj){
+			console.log(self.allData.customers.length)
+			_foreach(self.allData.customers, function (v, k, obj){
 				if(v.contact_detail){
 					arrSama1 = [];
 					arrSama2 = [];
@@ -2153,7 +2661,7 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 
 			console.log('akhir phoneOrigin '+phoneOrigin.length+' emailOrigin '+emailOrigin.length+' customerOrigin '+customerOrigin.length)
 
-			objectForeach(customerOrigin, function (v, k, obj){
+			_foreach(customerOrigin, function (v, k, obj){
 				if(v.identity.contact){
 					arrSama1 = [];
 					arrSama2 = [];
@@ -2187,10 +2695,12 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 				}
 			});
 
-			if(unikMailPhoneSama.length > 0 ){
-				console.log('unikMailPhone tidak sama '+unikMailPhoneSama.length)
+			console.log('unikMailPhoneSama '+unikMailPhoneSama.length)
+
+			if(unikMailPhoneSama.length > 0 ){//&& where != 'getCustomerBL'){
+				// console.log('unikMailPhone tidak sama '+unikMailPhoneSama.length)
 				if(regionDefault.province.length > 0 && regionDefault.city.length > 0 && regionDefault.districts.length > 0){
-					synceDataRegion(dataHasilSeleksi,unikMailPhoneSama);
+					synceDataRegion(dataHasilSeleksi,unikMailPhoneSama,_w,UID,idMarket);
 				}else{
 					let getRegion = true;
 					setTimeout(function runRegion(){
@@ -2203,7 +2713,7 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 								setTimeout(runRegion,0);
 							}
 						}else{
-							synceDataRegion(dataHasilSeleksi,unikMailPhoneSama);
+							synceDataRegion(dataHasilSeleksi,unikMailPhoneSama,_w,UID,idMarket);
 						}
 					},0);
 				}
@@ -2212,9 +2722,11 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 				if(where == 'transaksi'){
 					// self.changeProgress(self.progressBar.all);
 					// console.log('transaksi finis')
-					finishingTransaction(dataHasilSeleksi,UID,_w,idGet);
+					finishingTransaction(dataHasilSeleksi,UID,_w,idMarket);
 				}else if(where == 'getCustomerBL'){
 					console.log('customer finis')
+					timerGet2.get--;
+					timerGet2.status = true;
 					// self.notifyError2('Tidak ada data cuastomer baru!','warn');
 					// self.aSelectGet = {id : '', name : 'Select option get'};
 					// self.changeProgress(self.progressBar.all);
@@ -2225,7 +2737,7 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 			let arrSama1 = [];
 			let arrSama2 = [];
 			let checkMailPhone = false;
-			objectForeach(customerOrigin, function (v,k, o){
+			_foreach(customerOrigin, function (v,k, o){
 			// angular.forEach(customerOrigin,function(v,k){
 				if(v.identity.contact){
 					arrSama1 = [];
@@ -2259,10 +2771,10 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 					unikMailPhone.push(v);
 				}
 			});
-			console.log('unikmailphone1 '+unikMailPhone.length)
+			// console.log('unikmailphone1 '+unikMailPhone.length)
 			if(unikMailPhone.length > 0 ){
 				if(regionDefault.province.length > 0 && regionDefault.city.length > 0 && regionDefault.districts.length > 0){
-					synceDataRegion(dataHasilSeleksi,unikMailPhone);
+					synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket);
 				}else{
 					let getRegion = true;
 					setTimeout(function runRegion(){
@@ -2276,7 +2788,7 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 								setTimeout(runRegion,0);
 							}
 						}else{
-							synceDataRegion(dataHasilSeleksi,unikMailPhone);
+							synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket);
 						}
 					},0);
 				}
@@ -2323,9 +2835,9 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idGet){
 						console.log(error)
 					});
 					lengthData = 0;
-					$timeout(runCus,0);
+					setTimeout(runCus,0);
 				}else{
-					$timeout(runCus,0);
+					setTimeout(runCus,0);
 				}
 			}else{
 				if(self.allData.customers.length > 0){
@@ -2442,7 +2954,7 @@ function filter_customer(data){
 	let _mail = '';
 	let _ad = {};
 	let _contact = {};
-	objectForeach(data, function (val, key, obj){
+	_foreach(data, function (val, key, obj){
 		if(val.nama){
 			_nm = val.nama;
 		}
@@ -2462,7 +2974,7 @@ function filter_customer(data){
 					email:_mail.toLowerCase(),
 					id:key,
 					phone:_phone,
-					nama: upperCasseFirst(_nm),
+					nama: _upperCaseFirst(_nm),
 					add: _ad.districts.name+', '+_ad.city.name+', '+_ad.province.name+' '+_ad.postalcode,
 					contact_detail: _contact,
 					address_detail: _ad,
@@ -2475,15 +2987,15 @@ function filter_customer(data){
 	return data_arr_push;
 };
 
-function upperCasseFirst(string) {
-	var strToUp = string.split(" ");
-	for ( var i = 0; i < strToUp.length; i++ )
-	{
-		var j = strToUp[i].charAt(0).toUpperCase();
-		strToUp[i] = j + strToUp[i].substr(1).toLowerCase();
-	}
-	return strToUp.join(" ");
-}
+// function upperCaseFirst(string) {
+// 	var strToUp = string.split(" ");
+// 	for ( var i = 0; i < strToUp.length; i++ )
+// 	{
+// 		var j = strToUp[i].charAt(0).toUpperCase();
+// 		strToUp[i] = j + strToUp[i].substr(1).toLowerCase();
+// 	}
+// 	return strToUp.join(" ");
+// }
 
 function generateLocalMap(){
 	clientRedis.get(self.redis.key2, function (error, result) {
@@ -2495,7 +3007,7 @@ function generateLocalMap(){
 			localMap.once('value', function(snapshot){
 				console.log('create '+self.redis.key2)
 				let alldMap = snapshot.val();
-				let tmp_localMap = regionExtract(alldMap);
+				let tmp_localMap = _extractRegion(alldMap);
 				clientRedis.set(self.redis.key2, JSON.stringify(tmp_localMap), redis.print);//JSON.stringify(self.redis.val), redis.print);
 				clientRedis.expireat(self.redis.key2, parseInt((+new Date)/1000) + 86400);
 			});
@@ -2503,64 +3015,19 @@ function generateLocalMap(){
 	});
 };
 
-function regionExtract(dataRegion){
-	if(dataRegion){
-		if(dataRegion.districts.length > 0 && dataRegion.province.length > 0 && dataRegion.city.length > 0){
-			objectForeach(dataRegion.province, function (val, key, obj){
-				if(val.province_id){
-					regionDefault.province.push(val);
-					objectForeach(dataRegion.city, function (val1, key1, obj1){
-						if(val1.province_id == val.province_id){
-							regionDefault.city.push(val1);
-							objectForeach(dataRegion.districts, function (val2, key2, obj2){
-								if(val2.province_id == val1.province_id && val2.city_id == val1.city_id){
-									regionDefault.districts.push(val2);
-								}
-							});
-						}
-					});
-				}
-			});
-			if(regionDefault.province.length > 0){
-				objectForeach(regionDefault.province, function (v, k, o){
-					if(v.province){
-						regionDefault.provinceName.push(v.province.toLowerCase());
-					}
-				});
-			}
-			if(regionDefault.city.length > 0){
-				objectForeach(regionDefault.city, function (v, k, o){
-					if(v.city_name){
-						regionDefault.cityName.push(v.city_name.toLowerCase());
-					}
-				});
-			}
-			if(regionDefault.districts.length > 0){
-				objectForeach(regionDefault.districts, function (v, k, o){
-					if(v.subdistrict_name){
-						regionDefault.districtsName.push(v.subdistrict_name.toLowerCase());
-					}
-				});
-			}
-		}else{
-		   console.log('err :: Region not define!'); 
-		}
-		return regionDefault;
-	}
-};
 
-function synceDataRegion(dataHasilSeleksi,unikMailPhone){
-
+function synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket){
+	console.log('synceDataRegion '+dataHasilSeleksi.length)
 	// if(self.aSelectGet.id == 'getCustomerBL' || self.aSelectGet.id == 'getTransactionSellerSuccess' || self.aSelectGet.id == 'getTransactionSellerFailed'){
 	// 	self.progressBar.all = unikMailPhone.length;
 	// }
 
 	if(unikMailPhone.length > 0){
-		// self.dataPostCustomer.transaction = [];
+		// synceDataRegionTransaction = [];
 		// self.dataPostCustomer.listCust = [];
 		let synceDataRegionTransaction = [];
 		// angular.forEach(unikMailPhone,function(v,k){
-		objectForeach(regionDefault.districts, function (v, k, o){
+		_foreach(unikMailPhone, function (v, k, o){//regionDefault.districts, function (v, k, o){
 			if(v.identity.address){
 				let feedback = v.identity.address;//angular.copy();
 				if(feedback.districts.name == 'Parompong'){
@@ -2572,11 +3039,11 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 				if(tmp_ds.length == 0){
 					let str = stringToArray(feedback.districts.name.toLowerCase());
 					// angular.forEach(str,function(vStr,kStr){
-					objectForeach(str, function (vStr, kStr, o1){
+					_foreach(str, function (vStr, kStr, o1){
 						if(vStr){
 							let data_tmp_ds = searchStringInArray(vStr,regionDefault.districtsName);
 							if(data_tmp_ds.length > 0){
-								objectForeach(data_tmp_ds, function (vStr1, kStr1, o2){
+								_foreach(data_tmp_ds, function (vStr1, kStr1, o2){
 								// angular.forEach(data_tmp_ds,function(vStr1,kStr){
 									if(vStr1){
 										tmp_ds.push(vStr1);
@@ -2592,12 +3059,12 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 				if(tmp_ct.length == 0){
 					let str = stringToArray(feedback.city.name.toLowerCase());
 					// angular.forEach(str,function(vStr,kStr){
-					objectForeach(str, function (vStr, kStr, o1){
+					_foreach(str, function (vStr, kStr, o1){
 						if(vStr){
 							let data_tmp_ct = searchStringInArray(vStr,regionDefault.cityName);
 							if(data_tmp_ct.length > 0){
 								// angular.forEach(data_tmp_ct,function(vStr1,kStr){
-								objectForeach(data_tmp_ct, function (vStr1, kStr1, o2){				
+								_foreach(data_tmp_ct, function (vStr1, kStr1, o2){				
 									if(vStr1){
 										tmp_ct.push(vStr1);
 									}
@@ -2613,11 +3080,11 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 				if(tmp_pr.length == 0){
 					let str = stringToArray(feedback.province.name.toLowerCase());
 					// angular.forEach(str,function(vStr,kStr){
-					objectForeach(str, function (vStr, kStr, o1){
+					_foreach(str, function (vStr, kStr, o1){
 						if(vStr){
 							let data_tmp_pr = searchStringInArray(vStr,regionDefault.provinceName);
 							if(data_tmp_pr.length > 0){
-								objectForeach(data_tmp_pr, function (vStr1, kStr1, o2){				
+								_foreach(data_tmp_pr, function (vStr1, kStr1, o2){				
 									// angular.forEach(data_tmp_pr,function(vStr1,kStr){
 									if(vStr1){
 										tmp_pr.push(vStr1);
@@ -2633,19 +3100,19 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 				let DataCity = [];
 				let DataDistricts = [];
 				if(tmp_pr.length > 0 && tmp_ct.length > 0){
-					objectForeach(tmp_pr, function (vPars, kPars, o1){				
+					_foreach(tmp_pr, function (vPars, kPars, o1){				
 					// angular.forEach(tmp_pr,function(vPars,kPars){
 						if(vPars){
 							DataProv.push(regionDefault.province[vPars]);
 						}
 					});
-					objectForeach(tmp_ct, function (vPars, kPars, o1){
+					_foreach(tmp_ct, function (vPars, kPars, o1){
 					// angular.forEach(tmp_ct,function(vPars,kPars){
 						if(vPars){
 							DataCity.push(regionDefault.city[vPars]);
 						}
 					});
-					objectForeach(tmp_ds, function (vPars, kPars, o1){
+					_foreach(tmp_ds, function (vPars, kPars, o1){
 					// angular.forEach(tmp_ds,function(vPars,kPars){
 						if(vPars){
 							DataDistricts.push(regionDefault.districts[vPars]);
@@ -2653,14 +3120,14 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 					});
 					if(DataProv.length > 0){
 						let tmpCt2 = [];
-						objectForeach(DataProv, function (v1, k1, o1){
+						_foreach(DataProv, function (v1, k1, o1){
 						// angular.forEach(DataProv,function(v1,k1){
 							if(v1.province_id){
 								feedback.province.id = v1.province_id;
 								v.identity.address.province.id = v1.province_id;
 								feedback.province.name = v1.province;
 								v.identity.address.province.name = v1.province;
-								objectForeach(DataCity, function (v2, k2, o2){
+								_foreach(DataCity, function (v2, k2, o2){
 								// angular.forEach(DataCity,function(v2,k2){
 									if(v2.province_id == v1.province_id){
 										tmpCt2.push(v2)
@@ -2674,7 +3141,7 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 							feedback.city.name = tmpCt2[0].type+' '+tmpCt2[0].city_name;
 							v.identity.address.city.id = tmpCt2[0].city_id;
 							v.identity.address.city.name = tmpCt2[0].type+' '+tmpCt2[0].city_name;
-							objectForeach(DataDistricts, function (v2, k2, o2){
+							_foreach(DataDistricts, function (v2, k2, o2){
 							// angular.forEach(DataDistricts,function(v2,k2){
 								if(v2.province_id == feedback.province.id){
 									if(v2.city_id == feedback.city.id){
@@ -2688,7 +3155,7 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 							});
 							if(kecCheck_id == false){
 								let putOne = true;
-								objectForeach(regionDefault.districts, function (v2, k2, o2){
+								_foreach(regionDefault.districts, function (v2, k2, o2){
 								// angular.forEach(regionDefault.districts,function(v2,k2){
 									if(putOne == true && v2.province_id == feedback.province.id && v2.city_id == feedback.city.id){
 										putOne = false;
@@ -2702,10 +3169,10 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 
 						}else if(tmpCt2.length > 1){
 							let kecCheck_id = false;
-							objectForeach(tmpCt2, function (vCt, kCt, o1){
+							_foreach(tmpCt2, function (vCt, kCt, o1){
 							// angular.forEach(tmpCt2,function(vCt,kCt){
 								if(vCt.city_id && vCt.province_id == feedback.province.id){
-									objectForeach(DataDistricts, function (v2, k2, o2){
+									_foreach(DataDistricts, function (v2, k2, o2){
 									// angular.forEach(DataDistricts,function(v2,k2){
 										if(v2.province_id == feedback.province.id){
 											if(vCt.city_id == v2.city_id){
@@ -2726,7 +3193,7 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 							});
 							if(kecCheck_id == false){
 								let putOne = true;
-								objectForeach(regionDefault.districts, function (v2, k2, o2){
+								_foreach(regionDefault.districts, function (v2, k2, o2){
 								// angular.forEach(regionDefault.districts,function(v2,k2){
 									if(putOne == true && v2.province_id == feedback.province.id && v2.city_id == feedback.city.id){
 										putOne = false;
@@ -2747,29 +3214,40 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone){
 						kategori:v.identity.kategori,
 						nama:v.identity.nama,
 						gender:'',
-						idParentUser:UlogEM,
-						idStaffInput:UlogID,
+						idParentUser:UID,
+						idStaffInput:UID,
 						date : v.identity.date,
 						marketPlace:{
 							userName:v.username,
 							email:v.identity.contact.email,
 							phone:v.identity.contact.phone,
-							marketPlace:self.aSelectMarket.name.toLowerCase()
+							marketPlace:_w
 						}
 					});
 				}else{
 					console.log('data location salah')
 				}
 			}
-		});   
-		// self.genderDataCustomer(dataHasilSeleksi,unikMailPhone);
+		});
+		// console.log(synceDataRegionTransaction.length);
+		if(synceDataRegionTransaction.length > 0){
+			genderDataCustomer(dataHasilSeleksi,unikMailPhone,synceDataRegionTransaction,_w,UID,idMarket);
+		}else{
+			timerGet2.get--;
+			timerGet2.status = true;
+		}
+	}else{
+		console.log('err :: synceDataRegion')
+		timerGet2.get--;
+		timerGet2.status = true;
 	}
 };
 
-function finishingTransaction(dataHasilSeleksi,UID,_w,idGet){
+function finishingTransaction(dataHasilSeleksi,UID,_w,idMarket){
+	let idGet = idMarket.i;
 	if(dataHasilSeleksi.length > 0 && self.allData.customers.length > 0){
-		console.log('finishingTransaction')
-		objectForeach(dataHasilSeleksi, function (v, k, o){
+		// console.log('finishingTransaction')
+		_foreach(dataHasilSeleksi, function (v, k, o){
 			if(v.customer){
 				let feedback = v.customer;
 				let dataToPush = {
@@ -2808,7 +3286,7 @@ function finishingTransaction(dataHasilSeleksi,UID,_w,idGet){
 				if(feedback.identity.contact){
 					let checkdata = false;
 					if(feedback.identity.contact.email){
-						objectForeach(self.allData.customers, function (v1, k1, o1){
+						_foreach(self.allData.customers, function (v1, k1, o1){
 							if(v1.email){
 								if(v1.email.toLowerCase() == feedback.identity.contact.email.toLowerCase()){
 									checkdata = true;
@@ -2820,7 +3298,7 @@ function finishingTransaction(dataHasilSeleksi,UID,_w,idGet){
 						});
 					}
 					if(checkdata == false){
-						objectForeach(self.allData.customers, function (v1, k1, o1){
+						_foreach(self.allData.customers, function (v1, k1, o1){
 							if(v1.phone){
 								if(v1.phone.toLowerCase() == feedback.identity.contact.phone.toLowerCase()){
 									checkdata = true;
@@ -2839,15 +3317,18 @@ function finishingTransaction(dataHasilSeleksi,UID,_w,idGet){
 			}
 		});
 
-		generateSupplier(dataHasilSeleksi,UID,_w,idGet);
+		generateSupplier(dataHasilSeleksi,UID,_w,idMarket);
 	}else{
 		console.log('else finishingTransaction')
+		timerGet2.get--;
+		timerGet2.status = true;
 	}
 };
 
-function generateSupplier(dataHasilSeleksi,UID,_w,idGet){
+function generateSupplier(dataHasilSeleksi,UID,_w,idMarket){
+	let idGet = idMarket.i;
 	if(dataHasilSeleksi.length > 0 && self.default.data[UID].brand){
-		console.log('generateSupplier')
+		// console.log('generateSupplier')
 		let supplier = {
 			add:'',
 			contact:{},
@@ -2899,7 +3380,7 @@ function generateSupplier(dataHasilSeleksi,UID,_w,idGet){
 			status:'none'
 		};
 		let createNewBrand = true;
-		objectForeach(self.default.data[UID].brand, function (v, k, o){
+		_foreach(self.default.data[UID].brand, function (v, k, o){
 			if(v.marketPlace){ 
 				if(v.marketPlace.id == idGet && v.marketPlace.marketPlace == _w.toLowerCase()){
 					createNewBrand = false;
@@ -2915,27 +3396,27 @@ function generateSupplier(dataHasilSeleksi,UID,_w,idGet){
 		});
 
 		if(supplier.id){
-			objectForeach(dataHasilSeleksi, function (v, k, o){
+			_foreach(dataHasilSeleksi, function (v, k, o){
 				if(v.supplier){
 					v['originSupplier'] = v.supplier;
 					v.supplier = supplier;
 				}
 			});
-			ongkirGenerateData(dataHasilSeleksi,UID,_w,idGet);
+			ongkirGenerateData(dataHasilSeleksi,UID,_w,idMarket);
 		}
 
 		if(createNewBrand == true){
 			console.log('create brand true')
-			// self.timerGet.get = 1;
-			// self.timerGet.status = true;
-			// $timeout(function autoPutProduk(){
-			// 	if(self.timerGet.get > 0){
-			// 		if(self.timerGet.status == true){
-			// 			self.timerGet.status = false;
+			// timerGet1.get = 1;
+			// timerGet1.status = true;
+			// setTimeout(function autoPutProduk(){
+			// 	if(timerGet1.get > 0){
+			// 		if(timerGet1.status == true){
+			// 			timerGet1.status = false;
 			// 			self.generateNewProfile(self.accountMarket.id,'transaksi');
-			// 			$timeout(autoPutProduk, 0);
+			// 			setTimeout(autoPutProduk, 0);
 			// 		}else{
-			// 			$timeout(autoPutProduk, 0);
+			// 			setTimeout(autoPutProduk, 0);
 			// 		}
 			// 	}else{
 			// 		self.ongkirGenerateData(dataHasilSeleksi);
@@ -2945,16 +3426,19 @@ function generateSupplier(dataHasilSeleksi,UID,_w,idGet){
 
 	}else{
 		console.log('err :: generateSupplier');
-		// self.timerGet.get = 1;
-		// self.timerGet.status = true;
-		// $timeout(function autoPutProduk(){
-		// 	if(self.timerGet.get > 0){
-		// 		if(self.timerGet.status == true){
-		// 			self.timerGet.status = false;
+		timerGet2.get--;
+		timerGet2.status = true;
+		
+		// timerGet1.get = 1;
+		// timerGet1.status = true;
+		// setTimeout(function autoPutProduk(){
+		// 	if(timerGet1.get > 0){
+		// 		if(timerGet1.status == true){
+		// 			timerGet1.status = false;
 		// 			self.generateNewProfile(self.accountMarket.id,'transaksi');
-		// 			$timeout(autoPutProduk, 0);
+		// 			setTimeout(autoPutProduk, 0);
 		// 		}else{
-		// 			$timeout(autoPutProduk, 0);
+		// 			setTimeout(autoPutProduk, 0);
 		// 		}
 		// 	}else{
 		// 		self.ongkirGenerateData(dataHasilSeleksi);
@@ -2963,10 +3447,11 @@ function generateSupplier(dataHasilSeleksi,UID,_w,idGet){
 	}
 };
 
-function ongkirGenerateData(dataHasilSeleksi,UID,_w,idGet){
+function ongkirGenerateData(dataHasilSeleksi,UID,_w,idMarket){
+	let idGet = idMarket.i;
 	if(dataHasilSeleksi.length > 0){
-		console.log('ongkirGenerateData')
-		objectForeach(dataHasilSeleksi, function (v, k, o){
+		// console.log('ongkirGenerateData')
+		_foreach(dataHasilSeleksi, function (v, k, o){
 			if(v.customer.status == 'none'){
 				let identity = v.customer.identity.address;
 				v.ongkir.addTujuan = identity.districts.name+', '+identity.city.name+', '+identity.province.name+', '+identity.postalcode;
@@ -3008,7 +3493,7 @@ function ongkirGenerateData(dataHasilSeleksi,UID,_w,idGet){
 					v.status.status = 'retur';
 				}
 				let bobotNew = 0;
-				objectForeach(v.produk, function (vb, kb, ob){
+				_foreach(v.produk, function (vb, kb, ob){
 					if(vb.berat_total){
 						bobotNew = bobotNew + vb.berat_total;
 					}
@@ -3041,34 +3526,10 @@ function ongkirGenerateData(dataHasilSeleksi,UID,_w,idGet){
 		self.produkPost.transaksi[idGet+'return'] = []
 		// let dataCompare = angular.copy(self.dataAccount['transaksiImport'+self.aSelectMarket.name.toLowerCase()]);
 		let dataCompare = self.default.data[UID]['transaksiImport'+_w];
-		// angular.forEach(dataHasilSeleksi,function(v,k){
-		// objectForeach(dataHasilSeleksi, function (v, k, o){
-			// if(v){//.marketPlace){
-				// tOf = false;
-				// if(self.default.data[UID]['transaksiImport'+_w] && self.default.data[UID]['transaksiImport'+_w].length > 0){
-				// 	objectForeach(self.default.data[UID]['transaksiImport'+_w], function (v1, k1, o1){
-				// 		if(v1){
-				// 			if(v1.transaction_id == v.marketPlace.transaction_id && v1.id == v.marketPlace.id){
-				// 				tOf = true;
-				// 			}
-				// 		}
-				// 	});
-				// 	console.log('data compare '+tOf+' '+v.marketPlace.transaction_id+' : '+v.marketPlace.id)
-				// 	if(tOf == false){
-				// 		dmpData.push(v);
-				// 	}
-				// }else{
-				// 	if(tOf == false){
-				// 		dmpData.push(v);
-				// 	}
-				// }
-			// }
-		// });
-		console.log('data to check '+self.default.data[UID]['transaksiImport'+_w].length)
-		objectForeach(dataHasilSeleksi, function (v2, k2, obj2) {
+		_foreach(dataHasilSeleksi, function (v2, k2, obj2) {
 			if(v2.marketPlace.id){
 				// console.log('tOf before'+tOf)
-				tOf = checkExistTransaction(v2,self.default.data[UID]['transaksiImport'+_w],_w);
+				tOf = _existTransaction(v2,self.default.data[UID]['transaksiImport'+_w],_w);//checkExistTransaction
 				// console.log('tOf after'+tOf)
 				if(tOf == false){
 					// dmpData.push(v2);
@@ -3077,37 +3538,45 @@ function ongkirGenerateData(dataHasilSeleksi,UID,_w,idGet){
 			}
 		});
 		
-		console.log('dataHasilSeleksi1 :: '+dataHasilSeleksi.length+' dataCompare:'+dataCompare.length+' dmpData :: '+self.produkPost.transaksi[idGet].length)
+		// console.log('dataHasilSeleksi1 :: '+dataHasilSeleksi.length+' dataCompare:'+dataCompare.length+' dmpData :: '+self.produkPost.transaksi[idGet].length)
 		if(self.produkPost.transaksi[idGet].length > 0){
 			console.log(self.produkPost.transaksi[idGet].length+' data baru "'+idGet+'" di '+_w+' loaded!');
-			saveOrder(idGet,_w,UID);
+			saveOrder(idMarket,_w,UID);
 			// callTime.getTransaction = true;
 		}else{
 			console.log('Tidak ada transaksi baru "'+idGet+'" di '+_w+'!');
-			callTime.getTransaction = true;
+			// callTime.getTransaction = true;
+			timerGet2.get--;
+			timerGet2.status = true;
 		}
 	}else{
 		console.log('err :: ongkirGenerateData')
-		callTime.getTransaction = true;
+		// callTime.getTransaction = true;
+		timerGet2.get--;
+		timerGet2.status = true;
 	}
 };
 
-function saveOrder(idGet,_w,UID){
+function saveOrder(idMarket,_w,UID){
+	let idGet = idMarket.i;
 	if(self.produkPost.transaksi[idGet] && self.produkPost.transaksi[idGet].length > 0){
-		console.log('saveOrder, dataSave:'+self.produkPost.transaksi[idGet].length+' idGet:'+idGet+' _w:'+_w+' UID:'+UID)
+		// console.log('saveOrder, dataSave:'+self.produkPost.transaksi[idGet].length+' idGet:'+idGet+' _w:'+_w+' UID:'+UID)
 		timerGet1.get = 1;
 		timerGet1.status = true;
 		let transaksiCheck = true;
 		let dataSave = self.produkPost.transaksi[idGet];
+		let x = 0;
 		setTimeout(function autoPutTransaction(){
 			if(timerGet1.get > 0){
 				if(timerGet1.status == true && dataSave[timerGet1.get-1]){
 					// console.log('transaksiCheck before'+transaksiCheck)
-					transaksiCheck = checkExistTransaction(dataSave[timerGet1.get-1],self.default.data[UID]['transaksiImport'+_w],_w);
+					transaksiCheck = _existTransaction(dataSave[timerGet1.get-1],self.default.data[UID]['transaksiImport'+_w],_w);
 					timerGet1.status = false;
 					// console.log('transaksiCheck after'+transaksiCheck)
 					if(transaksiCheck == false && (timerGet1.get-1) < dataSave.length){
-						console.log('push data transaksi:'+(timerGet1.get-1));
+						
+
+						// console.log('push data transaksi:'+(timerGet1.get-1));
 						let dataConverUp = dataSave[timerGet1.get-1];
 						let nd = new Date(dataConverUp.create);
 						let idPO = nd.getDate()+
@@ -3115,46 +3584,224 @@ function saveOrder(idGet,_w,UID){
 							('0' + nd.getFullYear()).slice(-2)+
 							('0' + nd.getMinutes()).slice(-2)+
 							('0' + nd.getHours()).slice(-2);
-						// self.ajacCall2({id:dataPost.customer.id, code:idPO, data:dataPost, status:'new' },'getIdNewOrder','new_order','post');
-						// let dataConverUp = ktgUpload[timerGet1.get-1];//JSON.stringify(ktgUpload[timerGet1.get-1]);
-						let dataPost = {
-							pass: self._paramsData.pass,
-							met: self._paramsData.met,
+
+						let coverPhpParams = {
+							allData: self.allData.users[UID],
+							allCustomer: self.allData.customers,
 							u : UID,
 							p : dataConverUp.customer.id,
 							c : 'new',
 							d : dataConverUp,
-							_w : 'import_transaction',
 							code:idPO,
-							// id:
 						};
-
-						request.get({
-							headers: {'content-type': 'application/json'},
-							url: self._paramsData.uri+'3',
-							json: { 'json' : dataPost }
-						},
-						function(error, response, body){
-							// self.produkPost.kategori.push(dataConverUp);
-							if(!error && response.body){
-								let _returns =  response.body;
-								console.log('response push transaction ',_returns.status)
-								if(_returns.status == true && (timerGet1.get-1) < dataSave.length){
-									self.produkPost.transaksi[idGet+'return'].push(_returns);
-									// self.produkPost.transaksi.push(_returns);//dataSave[timerGet1.get-1]);
-									let dataMarket = dataSave[timerGet1.get-1]['marketPlace']; 
-									if(dataMarket && _returns.idMarketPlace){
-										console.log('ada marketplace')
-										self.default.data[UID]['transaksiImport'+_w].push(dataMarket);
-										self.allData.users[UID].marketplace[_w]['transaksiImport'][_returns.idMarketPlace] = dataMarket;
-										self.allData.marketPlaceUser[UID].marketplace[_w]['transaksiImport'][_returns.idMarketPlace] = dataMarket;
-									}else{
-										console.log('tidak ada marketplace')
+						
+						let getDataExtract = _saveOrder(coverPhpParams);
+						if(getDataExtract){
+							// console.log('push '+getDataExtract.p)
+							let dataPost = {
+								pass: self._paramsData.pass,
+								met: self._paramsData.met,
+								p:getDataExtract.p,
+								u:getDataExtract.u,
+								c:getDataExtract.c,
+								d:getDataExtract.d,
+								code:getDataExtract.code,
+								_w : 'import_transaction',
+								code:idPO,
+								access: self.access[UID].access
+							};
+							
+							self.produkPost.transaksi[getDataExtract.p] = getDataExtract.d;
+							
+							// checkRoles
+							let accessOrder = dataPost.access.Order;
+							let accessRole = false;
+							let countobj = 0;
+							let existTableOrder = false;
+							let tableDataOrder = '';
+							if(self.allData.users[UID].order){
+								tableDataOrder = self.allData.users[UID].order;
+								_foreach(tableDataOrder,function (v, k, o) {
+									if(v){
+										_foreach(v,function (v1, k1, o1) {
+											if(v1){
+												countobj++;
+											}
+										});
 									}
+								});
+								existTableOrder = true;
+							}else{
+								self.allData.users[UID].order = {};
+							}
+
+							if((accessOrder > countobj && accessOrder != false) || accessOrder == "unlimited"){
+								accessRole = true;
+							}
+
+							console.log('accessOrder : '+accessOrder+', accessRole : '+accessRole+', countobj : '+countobj)
+							if(accessRole == true){
+								self.produkPost.transaksi[getDataExtract.p]['pushData'] = [];
+								if(getDataExtract.d.updateMarketplace.length > 0){
+									
+									let newPostMarket = getDataExtract.d.updateMarketplace;
+									for (let index = 0; index < newPostMarket.length; index++) {
+										let aLink = db.ref(newPostMarket[index].link);
+										let pushData = aLink.push();
+										pushData.set(newPostMarket[index].data);
+										pushData.on("child_added", function(feedbackAdd) {
+											let postId = pushData.key;
+											self.produkPost.transaksi[getDataExtract.p]['pushData'].push({
+												key: feedbackAdd.key,
+												val: feedbackAdd.val()
+											});
+											self.default.data[UID]['transaksiImport'+_w].push(newPostMarket[index].data);
+											self.allData.users[UID].marketplace[_w]['transaksiImport'][postId] = newPostMarket[index].data;
+											self.allData.marketPlaceUser[UID].marketplace[_w]['transaksiImport'][postId] = newPostMarket[index].data;
+
+										});										
+									}
+								}
+								if(getDataExtract.d.order.length > 0){
+									
+									let newPostOrder = getDataExtract.d.order;
+									for (let index = 0; index < newPostOrder.length;) {
+										let newCusID = newPostOrder[index].id_customer;
+										let newKey = newPostOrder[index].key_po; 
+										let newVal = newPostOrder[index].val_po;
+										
+										if(existTableOrder == false){
+											let createDataOrder1 = db.ref('users/'+UID);
+											let usersRef = createDataOrder1.child('order/'+newCusID);
+											usersRef.set({
+												[newKey]: newVal
+											});
+											usersRef.on("child_added", function(feedbackAdd) {
+												console.log('data push ________________________________ 1 ')
+												self.allData.users[UID].order[newCusID] = {};
+												self.allData.users[UID].order[newCusID][newKey] = newVal;
+												if(self.allData.users[UID].order){
+													existTableOrder = true;
+												}else{
+													existTableOrder = false;
+												}
+
+												index++;
+											});
+										}else{
+											if(self.allData.users[UID].order[newCusID]){
+												let aLink = db.ref(newPostOrder[index].link);
+												aLink.set(newVal);
+												aLink.on("child_added", function(feedbackAdd) {
+													console.log('data push ________________________________ 2 ')
+													self.allData.users[UID].order[newCusID][newKey] = newVal;
+													if(self.allData.users[UID].order){
+														existTableOrder = true;
+													}else{
+														existTableOrder = false;
+													}
+
+													index++;
+												});
+											}else{
+												let createDataOrder2 = db.ref('users/'+UID);
+												let usersRef2 = createDataOrder2.child('order/'+newCusID);
+												usersRef2.set({
+													[newKey]: newVal
+												});
+
+												usersRef2.on("child_added", function(feedbackAdd) {
+													console.log('data push ________________________________ 3 ')
+													self.allData.users[UID].order[newCusID] = {};
+													self.allData.users[UID].order[newCusID][newKey] = newVal;
+													if(self.allData.users[UID].order){
+														existTableOrder = true;
+													}else{
+														existTableOrder = false;
+													}
+
+													index++;
+												});
+											}
+										}
+									}
+								}
+								if(getDataExtract.d.produk.length > 0){
+									
+									let newPostProduk = getDataExtract.d.produk;
+									for (let index = 0; index < newPostProduk.length; index++) {
+
+										let newlink = newPostProduk[index].link;
+										let newval_stok = newPostProduk[index].val_stok; 
+										let newkey_stok = newPostProduk[index].key_stok;
+										let newid_produk = newPostProduk[index].id_produk;
+										let newVarian = newPostProduk[index].varian;
+										let aLink3 = db.ref(newlink);
+										aLink3.set(newval_stok);
+										aLink3.on("child_added", function(feedbackAdd) {
+											console.log('update '+newid_produk+', '+newkey_stok)
+											self.allData.users[UID].produk[newid_produk].varian[newVarian].stok[newkey_stok] = newval_stok;
+										});								
+									}
+								}
+								if((timerGet1.get-1) < dataSave.length){
 									timerGet1.status = true;
 									timerGet1.get++;
 								}else{
-									// self.produkPost.transaksi.push({post:dataPost,ret:_returns,count:(timerGet1.get-1)});
+									timerGet1.status = false;
+									timerGet1.get = 0;
+								}
+							}else{
+								if((timerGet1.get-1) < dataSave.length){
+									timerGet1.status = true;
+									timerGet1.get++;
+								}else{
+									timerGet1.status = false;
+									timerGet1.get = 0;
+								}
+							}
+
+							/*request.get({
+								headers: {'content-type': 'application/json'},
+								url: self._paramsData.uri+'3',
+								json: { 'json' : dataPost },
+								timeout:0
+							},
+							function(error, response, body){
+								// self.produkPost.kategori.push(dataConverUp);
+								console.log('response request :: '+x);
+								x = 0;
+								if(!error && response.body){
+									let _returns =  response.body;
+									// self.produkPost.transaksi[idGet+'return'].push(_returns);
+									console.log('response push transaction ',_returns.status)
+									if(_returns.status == true && (timerGet1.get-1) < dataSave.length){
+										self.produkPost.transaksi[idGet+'return'].push(_returns);
+										// self.produkPost.transaksi.push(_returns);//dataSave[timerGet1.get-1]);
+										// let dataMarket = dataSave[timerGet1.get-1]['marketPlace']; 
+										if(_returns.dataMarket && _returns.idMarketPlace){
+											console.log('ada marketplace')
+											self.default.data[UID]['transaksiImport'+_w].push(_returns.dataMarket);
+											self.allData.users[UID].marketplace[_w]['transaksiImport'][_returns.idMarketPlace] = _returns.dataMarket;
+											self.allData.marketPlaceUser[UID].marketplace[_w]['transaksiImport'][_returns.idMarketPlace] = _returns.dataMarket;
+										}else{
+											console.log('tidak ada marketplace')
+										}
+										timerGet1.status = true;
+										timerGet1.get++;
+									}else{
+										// self.produkPost.transaksi.push({post:dataPost,ret:_returns,count:(timerGet1.get-1)});
+										if((timerGet1.get-1) < dataSave.length){
+											timerGet1.status = true;
+											timerGet1.get++;
+										}else{
+											timerGet1.status = false;
+											timerGet1.get = 0;
+										}
+									}
+								}else{
+									// timerGet1.status = false;
+									// timerGet1.get = 0;
 									if((timerGet1.get-1) < dataSave.length){
 										timerGet1.status = true;
 										timerGet1.get++;
@@ -3163,11 +3810,14 @@ function saveOrder(idGet,_w,UID){
 										timerGet1.get = 0;
 									}
 								}
-							}else{
-								timerGet1.status = false;
-								timerGet1.get = 0;
-							}
-						});
+								if (error){//.code === 'ETIMEDOUT' && error.connect === true){
+									console.log('ERRRRRRRRRRor time out',error);
+								}
+							});*/
+
+						}else{
+							console.log('else push')
+						}
 					}else{
 						timerGet1.get++;
 						timerGet1.status = true;
@@ -3182,45 +3832,228 @@ function saveOrder(idGet,_w,UID){
 					}else{
 						setTimeout(autoPutTransaction, 0);
 					}
+					x++;
 				}
 			}else{
 				console.log('done upload transaction '+dataSave.length)
+				timerGet2.get--;
+				timerGet2.status = true;
 				// self.aSelectGet = {id : '', name : 'Select option get'};
-				callTime.getTransaction = true;
+				// callTime.getTransaction = true;
 			}
 		},0);
 	}else{
 		console.log('err :: saveOrder')
-		callTime.getTransaction = true;
+		// callTime.getTransaction = true;
+		timerGet2.get--;
+		timerGet2.status = true;
+	}
+};
+
+function rolemembershipModify(data){
+	let checkExist = false;
+	let keymembership = 'local:membership';
+	let categoryPayment = '';
+	if(data){
+		console.log('ada data marketPlace')
+	}else{
+		console.log('tidak ada data marketPlace')
+		data = self.allData.marketPlaceUser;
+	}
+	if(self.access){
+		_foreach(data, function (v, k, o) {
+			if(v.identity){
+				self.access[k] = {};
+				if(v.identity.membership){
+					self.access[k] = {
+						id:k,
+						membership:v.identity.membership,
+						access:{}
+					};
+				}
+			}
+		});
+		if(self.access){
+			clientRedis.get(keymembership, function (error, result) {
+				if (result) {
+					console.log('GET '+keymembership+' -> exist');
+					checkExist = true;
+					categoryPayment = JSON.parse(result);
+				}else{
+					console.log('GET '+keymembership+' -> not exist');
+				}
+				if(checkExist == false){
+					paymentDb.once("value", function(snapshot) {
+						let all_payment = snapshot.val();
+						categoryPayment = getDataByKey(all_payment,'category');
+						clientRedis.set(keymembership, JSON.stringify(categoryPayment), redis.print);
+						clientRedis.expireat(keymembership, parseInt((+new Date)/1000) + 86400);
+
+						_foreach(self.access, function (v, k, o) {
+							if(v.membership){
+								let getDataAccess = getDataByKeyVal(categoryPayment,'name',v.membership);
+								if(getDataAccess){
+									_foreach(getDataAccess.feature_list, function (v1, k1, o1) {
+										if(v1){
+											if(v1.access == true){
+												self.access[k].access[k1] = 'unlimited';
+											}else{
+												self.access[k].access[k1] = v1.access;
+											}
+											
+										}
+									});
+								}
+							}
+						});
+						// generateAllDataMarket(req,res);
+					});
+				}else{
+					_foreach(self.access, function (v, k, o) {
+						if(v.membership){
+							let getDataAccess = getDataByKeyVal(categoryPayment,'name',v.membership);
+							if(getDataAccess){
+								_foreach(getDataAccess.feature_list, function (v1, k1, o1) {
+									if(v1){
+										if(v1.access == true){
+											self.access[k].access[k1] = 'unlimited';
+										}else{
+											self.access[k].access[k1] = v1.access;
+										}
+										
+									}
+								});
+							}
+						}
+					});
+					// generateAllDataMarket(req,res);
+				}
+
+			});
+		}else{
+			console.log('err rolemembershipModify')
+			// viewDataCallbcak('error',req,res);
+		}
+	}else{
+		console.log('err rolemembershipModify')
+		// viewDataCallbcak('error',req,res);
 	}
 };
 
 
-function checkExistTransaction(dataCheck,dataForcheck,_w){
-	let tOf = false;
-	if(_w.toLowerCase() == 'bukalapak'){
-		if(dataCheck.marketPlace.transaction_id){
-			tOf = false;
-			if(dataForcheck.length > 0){
-				objectForeach(dataForcheck, function (v1, k, obj) {
-					// if(v1.id_produk == dataCheck.marketPlace.id_produk){
-					if(v1){
-						if(v1.transaction_id == dataCheck.marketPlace.transaction_id && v1.id == dataCheck.marketPlace.id){
-							console.log('sama '+v1.transaction_id)
-							tOf = true;
+function genderDataCustomer(dataHasilSeleksi,unikMailPhone,synceDataRegionTransaction,_w,UID,idMarket){
+	let idGet = idMarket.i;
+	
+	timerGet1.get = 1;
+	timerGet1.status = true;
+	setTimeout(function getData(){
+		if(timerGet1.get > 0){
+			if(timerGet1.status == true && synceDataRegionTransaction[timerGet1.get-1]){
+				let feed = {
+					'u' : self.accountMarket.id,
+					'p' : self.accountMarket.token,
+					'c' : 'getInfoUser',
+					'd' : synceDataRegionTransaction[timerGet1.get-1].marketPlace.userName,
+					'_w' : self.aSelectMarket.name.toLowerCase()
+				};
+				if(self.aSelectGet.id == 'getTransactionSellerSuccess' || self.aSelectGet.id == 'getTransactionSellerFailed'){
+					self.progressBar.data = 'Save data '+self.upperCasseFirst(synceDataRegionTransaction[timerGet1.get-1].nama);
+				}else if(self.aSelectGet.id == 'getCustomerBL'){
+					self.progressBar.data = self.upperCasseFirst(synceDataRegionTransaction[timerGet1.get-1].nama);
+				}
+				$http({
+					method: 'post',
+					url: baseurl+'/get_MarketPlace',
+					headers: {
+						'Content-Type': 'application/json;charset=utf-8'
+					},
+					data: feed,
+				}).then(function (response, status, headers, config) {
+					if(response.status == 200 && response.data && response.data.status == true){
+						if(response.data.data == 'pria' || response.data.data == 'wanita'){
+							synceDataRegionTransaction[timerGet1.get-1].gender = response.data.data;
+							unikMailPhone[timerGet1.get-1].identity.gender = response.data.data;
+						}else{
+							synceDataRegionTransaction[timerGet1.get-1].gender = 'pria';
+							unikMailPhone[timerGet1.get-1].identity.gender = 'pria';
+						}
+					}else{
+						synceDataRegionTransaction[timerGet1.get-1].gender = 'pria';
+						unikMailPhone[timerGet1.get-1].identity.gender = 'pria';
+					}
+					if(self.aSelectGet.id == 'getTransactionSellerSuccess' || self.aSelectGet.id == 'getTransactionSellerFailed'){
+						self.saveDataCustomer(synceDataRegionTransaction[timerGet1.get-1],unikMailPhone);
+						self.changeProgress(timerGet1.get);
+
+					}else if(self.aSelectGet.id == 'getCustomerBL'){
+						self.notifyError2('Load customer '+self.upperCasseFirst(synceDataRegionTransaction[timerGet1.get-1].nama)+'!','success');
+						
+						self.changeProgress(timerGet1.get);
+
+						if(timerGet1.get < synceDataRegionTransaction.length){
+							timerGet1.status = true;
+							timerGet1.get++;
+						}else{
+							timerGet1.status = false;
+							timerGet1.get = 0;
+						}
+					}
+				},function (error){
+					synceDataRegionTransaction[timerGet1.get-1].gender = 'pria';
+					unikMailPhone[timerGet1.get-1].identity.gender = 'pria';
+					if(self.aSelectGet.id == 'getTransactionSellerSuccess' || self.aSelectGet.id == 'getTransactionSellerFailed'){
+						self.saveDataCustomer(synceDataRegionTransaction[timerGet1.get-1],unikMailPhone);
+					}else if(self.aSelectGet.id == 'getCustomerBL'){
+						if(timerGet1.get < synceDataRegionTransaction.length){
+							timerGet1.status = true;
+							timerGet1.get++;
+						}else{
+							timerGet1.status = false;
+							timerGet1.get = 0;
 						}
 					}
 				});
+				timerGet1.status = false;
+				setTimeout(getData, 0);
+			}else{
+				setTimeout(getData, 0);
+			}
+		}else{
+			if(self.aSelectGet.id == 'getTransactionSellerSuccess' || self.aSelectGet.id == 'getTransactionSellerFailed'){
+				self.finishingTransaction(dataHasilSeleksi);
+			}else if(self.aSelectGet.id == 'getCustomerBL'){
+				self.customerImport();
 			}
 		}
-	}
-	// console.log('transaction_id '+dataCheck.marketPlace.transaction_id+' id '+dataCheck.marketPlace.id+' dataForcheck '+dataForcheck.length+' upload '+tOf);
-	return tOf;
+	},0);
 };
 
 
-// short function -------------
 
+
+// short function -------------
+function getDataByKey(dataObject,searchkey){
+    let _returns = '';
+    _foreach(dataObject, function (v, k, o) {
+        if(searchkey){
+            if(k == searchkey){
+                _returns = v;
+            }
+        }
+    });
+    return _returns;
+};
+function getDataByKeyVal(dataObject,searchkey,searchVal){
+    let _returns = '';
+    _foreach(dataObject, function (v, k, o) {
+        if(searchVal && searchkey){
+            if(v[searchkey] == searchVal){
+                _returns = v;
+            }
+        }
+    });
+    return _returns;
+};
 function searchStringInArray(str, strArray) {
 	let retUrnData = [];
 	for (var j=0; j<strArray.length; j++) {
