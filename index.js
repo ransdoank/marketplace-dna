@@ -1276,7 +1276,7 @@ function updateRedistCron(data){
 				if(self.redis.status == 'create' && data){
 					//console.log('create redis');
 					clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);//JSON.stringify(self.redis.val), redis.print);
-					clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 86400);
+					clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 1800); //86400);
 					self.redis.status = 'update';
 					self.redis.val = data;
 				}
@@ -1284,7 +1284,7 @@ function updateRedistCron(data){
 				if(self.redis.status == 'update' && data){
 					//console.log('update redis');
 					clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);
-					clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 86400);
+					clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 1800); //86400);
 					self.redis.val = data;
 				}
 			}
@@ -3189,7 +3189,7 @@ function generateLocalMap(){
 				let alldMap = snapshot.val();
 				let tmp_localMap = _extractRegion(alldMap);
 				clientRedis.set(self.redis.key2, JSON.stringify(tmp_localMap), redis.print);//JSON.stringify(self.redis.val), redis.print);
-				clientRedis.expireat(self.redis.key2, parseInt((+new Date)/1000) + 86400);
+				clientRedis.expireat(self.redis.key2, parseInt((+new Date)/1000) + 1800); //86400);
 			});
 		}
 	});
@@ -4241,7 +4241,7 @@ function rolemembershipModify(data){
 						let all_payment = snapshot.val();
 						categoryPayment = getDataByKey(all_payment,'category');
 						clientRedis.set(keymembership, JSON.stringify(categoryPayment), redis.print);
-						clientRedis.expireat(keymembership, parseInt((+new Date)/1000) + 86400);
+						clientRedis.expireat(keymembership, parseInt((+new Date)/1000) + 1800); //86400);
 
 						_foreach(self.access, function (v, k, o) {
 							if(v.membership){
