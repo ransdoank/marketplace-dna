@@ -88,12 +88,12 @@ exports._setOption = function(params){
 	options.key = params.key;
 	options.cert = params.cert;
 	options.ca = params.ca;
-	//console.log('_setOption');
+	console.log('_setOption');
 };
 
 exports._setDirname = function(a){
 	dirReplace = a;
-	//console.log('_setDirname');
+	console.log('_setDirname');
 };
 
 exports._setRedisOption = function(b){
@@ -101,19 +101,19 @@ exports._setRedisOption = function(b){
 	redisOption.key2 = b.key2;
 	redisOption.val = b.val;
 	redisOption.status = b.status;
-  	//console.log('_setRedisOption');
+  	console.log('_setRedisOption');
 };
 
 exports._setDataBase = function(c){
 	serviceAccount = require(c.serviceAcc);
 	databaseURL = c.databaseURL;
-  	//console.log('_setDataBase');
+  	console.log('_setDataBase');
 };
 
 exports._setDataAccess = function(d){
 	access_data.key = d.key;
 	access_data.met = d.met;
-  	//console.log('_setDataAccess');
+  	console.log('_setDataAccess');
 };
 
 
@@ -127,7 +127,7 @@ let botStatusServer = true;
 
 //set active listener
 exports._setactivePort = function(){
-	//console.log('_setactivePort');
+	console.log('_setactivePort');
 	// db setting
 	admin.initializeApp({
 		credential: admin.credential.cert(serviceAccount),
@@ -147,18 +147,18 @@ exports._setactivePort = function(){
 	// testDelete.set('');
 	// redis
 	clientRedis.on('connect', function() {
-		//console.log('clientRedis connected');
+		console.log('clientRedis connected');
 	});
 
 	clientRedis.on('error', function (err) {
-		//console.log('clientRedis something went wrong ' + err);
+		console.log('clientRedis something went wrong ' + err);
 	});
 
 	server = https.createServer(options, app);
 	io = require('socket.io')(server);
 	
 	server.listen(PORT, function(req,res){
-		//console.log("listening @ port:",PORT);
+		console.log("listening @ port:",PORT);
 	});
 
 };
@@ -200,11 +200,11 @@ app.get('/marketPlaceJobsApi', function(req,res){
   		pass: self._paramsData.pass,
   		met: self._paramsData.met
   	};//);
-	//console.log('marketPlaceJobsApi :: ');
+	console.log('marketPlaceJobsApi :: ');
 	  getData(req,res,'get',self._paramsData.uri,dataAwal,'allData');
 	  
   }else{
-	//console.log('err marketPlaceJobsApi :: ');
+	console.log('err marketPlaceJobsApi :: ');
 	self.redis = { key:redisOption.key, key2:redisOption.key2, val:redisOption.val, status:redisOption.status};
 	self.access = {};
 	viewDataCallbcak('marketplace-dna work',req,res);
@@ -220,32 +220,32 @@ function getData(req,res,met,baseUrl,dataPost,where){
 		let dataTmpRedis = '';
 		clientRedis.get(self.redis.key, function (error, result) {
 			if (result) {
-				//console.log('GET '+self.redis.key+' -> exist');
+				console.log('GET '+self.redis.key+' -> exist');
 					dataTmpRedis = JSON.parse(result);
 					checkExist = true;//false;//
 					self.redis.status = 'update';
 			}else{
-				//console.log('GET '+self.redis.key+' -> not exist');
+				console.log('GET '+self.redis.key+' -> not exist');
 				self.redis.status = 'create';
 			}
 			if(checkExist == true){
 				if(dataPost.pass == access_data.key && dataPost.met == access_data.met){
-					//console.log('GET '+self.redis.key+' checkExist -> exist '+where);
+					console.log('GET '+self.redis.key+' checkExist -> exist '+where);
 					rolemembershipModify(dataTmpRedis.marketPlaceUser);
 					routeCalback(req,res,dataTmpRedis,where);
 				}else{
-					//console.log('wrong access!');
+					console.log('wrong access!');
 					viewDataCallbcak('error',req,res);
 				}
 			}else{
-				//console.log('GET '+self.redis.key+' checkExist -> not exist');
+				console.log('GET '+self.redis.key+' checkExist -> not exist');
 				if(dataPost.pass == access_data.key && dataPost.met == access_data.met){
 					let tmp_dataMarket = {};
 					let tmp_dataCustomer = {};
 					let allDataUsers_tmp = {};
 					let alldataCustomer = {};
 					usersDataDb.once("value", function(snapshot) {
-						//console.log('val data get users')
+						console.log('val data get users')
 						allDataUsers_tmp = snapshot.val();
 						_foreach(allDataUsers_tmp, function (v, k, obj) {
 							if(v.marketplace){
@@ -275,13 +275,13 @@ function getData(req,res,met,baseUrl,dataPost,where){
 								// res.send(postData);
 								routeCalback(req,res,postData,where);
 							}else{
-								//console.log('wrong access!');
+								console.log('wrong access!');
 								viewDataCallbcak('error',req,res);
 							}
 						});
 					});
 				}else{
-					//console.log('wrong access!');
+					console.log('wrong access!');
 					viewDataCallbcak('error',req,res);
 				}
 
@@ -310,12 +310,12 @@ function getData(req,res,met,baseUrl,dataPost,where){
 				// 					setTimeout(allData,0);
 				// 				}
 				// 			}else{
-				// 				//console.log('getData '+feedback.existdbRedistCron)
+				// 				console.log('getData '+feedback.existdbRedistCron)
 				// 				routeCalback(req,res,feedback.self_data,where);
 				// 			}
 				// 		},0);
 				// 	}else{
-				// 		//console.log('err getData -> '+where+' :: '+error);
+				// 		console.log('err getData -> '+where+' :: '+error);
 				// 		viewDataCallbcak('error',req,res);
 				// 	}
 				// });
@@ -334,11 +334,11 @@ function routeCalback(req,res,feedback,where){
 			// return;
 			generateAllDataMarket(req,res);
 		}else{
-			//console.log('err routeCalback allData')
+			console.log('err routeCalback allData')
 			viewDataCallbcak('error',req,res);
 		}
 	}else{
-		//console.log('error routeCalback')
+		console.log('error routeCalback')
 		viewDataCallbcak('error',req,res);
 	}
 };
@@ -380,7 +380,7 @@ function generateAllDataMarket(req,res){
 							}
 						});
 					}else{
-						//console.log('err :: tidak ada brand '+prop)
+						console.log('err :: tidak ada brand '+prop)
 						self.default.data[prop].brand = {};
 						_foreach(val.supplier, function (val1, prop1, obj1) {
 							if(val1){
@@ -413,7 +413,7 @@ function generateAllDataMarket(req,res){
 						if(x == 0 ){
 							self.allData.users[prop].produk = {};
 							self.allData.marketPlaceUser[prop].produk = {};
-							//console.log('err :: tidak ada produk')
+							console.log('err :: tidak ada produk')
 						}
 					}
 
@@ -429,7 +429,7 @@ function generateAllDataMarket(req,res){
 						if(tmpCheckExistKtg.length == 0){
 							self.allData.users[prop].kategoriProduk = {};
 							self.allData.marketPlaceUser[prop].kategoriProduk = {};
-							//console.log('err :: tidak ada kategoriProduk')
+							console.log('err :: tidak ada kategoriProduk')
 						}
 					}
 
@@ -471,28 +471,28 @@ function generateAllDataMarket(req,res){
 									self.default.data[prop]['account'+prop1] = [];
 									self.allData.users[prop].marketplace[prop1] = {};
 									self.allData.marketPlaceUser[prop].marketplace[prop1] = {};
-									//console.log('err :: account '+prop1)
+									console.log('err :: account '+prop1)
 								}
 
 								if(self.default.data[prop]['produkImport'+prop1].length == 0){
 									self.default.data[prop]['produkImport'+prop1] = [];
 									self.allData.users[prop].marketplace[prop1]['produkImport'] = {};
 									self.allData.marketPlaceUser[prop].marketplace[prop1]['produkImport'] = {};
-									//console.log('err :: produkImport '+prop1)
+									console.log('err :: produkImport '+prop1)
 								}
 								
 								if(self.default.data[prop]['transaksiImport'+prop1].length == 0){
 									self.default.data[prop]['transaksiImport'+prop1] = [];
 									self.allData.users[prop].marketplace[prop1]['transaksiImport'] = {};
 									self.allData.marketPlaceUser[prop].marketplace[prop1]['transaksiImport'] = {};
-									//console.log('err :: transaksiImport '+prop1)
+									console.log('err :: transaksiImport '+prop1)
 								}
 								
 								if(self.default.data[prop]['customerImport'+prop1].length == 0){
 									self.default.data[prop]['customerImport'+prop1] = [];
 									self.allData.users[prop].marketplace[prop1]['customerImport'] = {};
 									self.allData.marketPlaceUser[prop].marketplace[prop1]['customerImport'] = {};
-									//console.log('err :: customerImport '+prop1)
+									console.log('err :: customerImport '+prop1)
 								}
 							}
 						});
@@ -603,26 +603,26 @@ function generateAllDataMarket(req,res){
 							setTimeout(allData,0);
 						}						
 					}else{
-						//console.log('finis all load');
+						console.log('finis all load');
 						viewDataCallbcak(self,req,res);
 					}
 				},0);
 			}else{
-				//console.log('err :: data users marketPlaceUser '+self.default.id.length);
+				console.log('err :: data users marketPlaceUser '+self.default.id.length);
 				viewDataCallbcak(self,req,res);
 			}
 		}else{
-			//console.log('err :: self data marketPlaceUser 0')
+			console.log('err :: self data marketPlaceUser 0')
 			viewDataCallbcak('error',req,res);
 		}
 	}else{
-		//console.log('err generateAllDataMarket')
+		console.log('err generateAllDataMarket')
 		viewDataCallbcak('error',req,res);
 	}
 };
 
 function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
-	//console.log('ada call '+c);//,dataTmpAcc,_w,UID)
+	console.log('ada call '+c);//,dataTmpAcc,_w,UID)
 	// self.getdata[dataTmpAcc.i][c] = [];
 	let allData = [];
 	timerGet1.get = 1;
@@ -639,13 +639,13 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
 					d : timerGet1.get,
 					_w : _w
 				};//);
-				// //console.log('get_ '+_w+' '+c+' '+dataPost);
+				// console.log('get_ '+_w+' '+c+' '+dataPost);
 				// request.get({
 				// 	headers: {'content-type': 'application/x-www-form-urlencoded'},
 				// 	url: self._paramsData.uri+'2?'+dataPost,
 				// 	body: dataPost
 				// },
-				// //console.log( self._paramsData.uri+'3')
+				// console.log( self._paramsData.uri+'3')
 				request.get({
 					headers: {'content-type': 'application/json'},
 					url: self._paramsData.uri+'3',
@@ -656,7 +656,7 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
 						let _returns =  response.body;//JSON.parse(response.body);
 						let feedback = [];
 						if(_returns.status == true && _returns.data){
-							// //console.log(_w+' '+_returns.data.length)
+							// console.log(_w+' '+_returns.data.length)
 							if(_returns.data.length > 0){
 								feedback = _replaceText(_returns.data);
 							}
@@ -676,7 +676,7 @@ function getProdukSaleNotsale(dataTmpAcc,c,_w,UID){
 						}
 					}else{
 						if(timerGet1.get == 2){
-							//console.log('error call '+c+' '+_w+' : '+dataTmpAcc.i);
+							console.log('error call '+c+' '+_w+' : '+dataTmpAcc.i);
 						}
 						timerGet1.status = false;
 						timerGet1.get = 0;
@@ -792,7 +792,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w,UID){
 						}
 					}else{
 						if(timerGet1.get == 2){
-							//console.log('err :: '+c+' '+_w+' : '+dataTmpAcc.i);
+							console.log('err :: '+c+' '+_w+' : '+dataTmpAcc.i);
 						}
 						timerGet1.status = false;
 						timerGet1.get = 0;
@@ -827,7 +827,7 @@ function getTransactionSellerFailedSuccessCustomer(dataTmpAcc,c,_w,UID){
 
 // generate data produk
 function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
-	//console.log('all data '+allData.length+' a '+a+' _w '+_w)
+	console.log('all data '+allData.length+' a '+a+' _w '+_w)
 	let feedback = [];
 	let brandGet = {
 		idBrend : '',
@@ -999,7 +999,7 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 						}
 						timerGet1.get++;
 					}else{
-						//console.log('prod else set')
+						console.log('prod else set')
 						timerGet1.get = 0;
 					}
 					setTimeout(prodDelay, 0);
@@ -1031,7 +1031,7 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 						});
 						
 						if(self.getdata[id][c].length > 0 ){
-							//console.log('ada data baru '+id+' di '+_w+' loaded! '+c);
+							console.log('ada data baru '+id+' di '+_w+' loaded! '+c);
 							if(c == 'getProdukSale'){
 								checkKtg(self.getdata[id][c],a,UID,c,_w);
 							}
@@ -1039,7 +1039,7 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 								checkKtg(self.getdata[id][c],a,UID,c,_w);
 							}
 						}else{
-							//console.log('Tidak ada data baru '+id+' di '+_w+' loaded! '+c);
+							console.log('Tidak ada data baru '+id+' di '+_w+' loaded! '+c);
 							if(c == 'getProdukSale'){
 								callTime.getProdukSale = true;
 							}
@@ -1058,17 +1058,17 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 							}
 						});
 						if(self.getdata[id][c].length > 0 ){
-							//console.log('ada data baru '+id+' di '+_w+' loaded! '+c);
+							console.log('ada data baru '+id+' di '+_w+' loaded! '+c);
 							checkKtg(self.getdata[id][c],a,UID,c,_w, dataHasilSeleksi,idMarket);
 						}else{
-							//console.log('Tidak ada data baru '+id+' di '+_w+' loaded! '+c);
+							console.log('Tidak ada data baru '+id+' di '+_w+' loaded! '+c);
 							checkKtg(self.getdata[id][c],a,UID,c,_w, dataHasilSeleksi,idMarket);
 							// synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket);
 						}
 					}
 				}else{
 					if(a == 'produk'){
-						//console.log(id+' tidak mempunyai data produk di '+_w+'!'+ a);
+						console.log(id+' tidak mempunyai data produk di '+_w+'!'+ a);
 						if(c == 'getProdukSale'){
 							callTime.getProdukSale = true;
 						}
@@ -1076,7 +1076,7 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 							callTime.getProdukNotSale = true;
 						}
 					}else if(a == 'transaksi'){
-						//console.log(id+' tidak mempunyai data produk di '+_w+'!'+ a);
+						console.log(id+' tidak mempunyai data produk di '+_w+'!'+ a);
 						checkKtg(self.getdata[id][c],a,UID,c,_w, dataHasilSeleksi,idMarket);
 						// self.regulasiData.dataList = feedback;
 					}
@@ -1084,9 +1084,9 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 			}
 		},0);
 	}else{
-		//console.log('err get brand '+id);
+		console.log('err get brand '+id);
 		if(a == 'produk'){
-			//console.log(id+' err ::  '+_w+'!'+ a);
+			console.log(id+' err ::  '+_w+'!'+ a);
 			if(c == 'getProdukSale'){
 				callTime.getProdukSale = true;
 			}
@@ -1094,7 +1094,7 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 				callTime.getProdukNotSale = true;
 			}
 		}else if(a == 'transaksi'){
-			//console.log(id+' err ::  '+_w+'!'+ a);
+			console.log(id+' err ::  '+_w+'!'+ a);
 			checkKtg(self.getdata[id][c],a,UID,c,_w, dataHasilSeleksi,idMarket);
 		}
 	}
@@ -1102,7 +1102,7 @@ function generateProduk(a,id,c,_w,allData,UID, dataHasilSeleksi,idMarket){
 
 // check kategori
 function checkKtg(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
-	//console.log('checkKtg '+data.length+', condition '+c);
+	console.log('checkKtg '+data.length+', condition '+c);
 	let ktg = [];
 	let ktgArr = [];
 	let ktgUpload = [];
@@ -1140,7 +1140,7 @@ function checkKtg(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
 		};
 	}
 	if(ktgUpload.length > 0 ){
-		//console.log('ada ktg baru '+ktgUpload.length)
+		console.log('ada ktg baru '+ktgUpload.length)
 		// timerGet1.get = 1;
 		// timerGet1.status = true;
 		// let x = 0;
@@ -1220,7 +1220,7 @@ function checkKtg(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
 					}
 				}
 			}else{
-				//console.log(ktgUpload.length+' kategori baru upload');
+				console.log(ktgUpload.length+' kategori baru upload');
 				if(c == 'transaksi'){
 					saveContinue(data,where,UID,c,_w, dataHasilSeleksi,idMarket);
 				}else{
@@ -1229,7 +1229,7 @@ function checkKtg(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
 			}
 		},0);
 	}else{
-		//console.log('tidak ada ktg baru')
+		console.log('tidak ada ktg baru')
 		if(c == 'transaksi'){
 			return	saveContinue(data,where,UID,c,_w, dataHasilSeleksi,idMarket);
 		}else{
@@ -1265,16 +1265,16 @@ function updateRedistCron(data){
 	if(self.redis){
 		clientRedis.get(self.redis.key, function (error, result) {
 			if (result) {
-				//console.log('GET '+self.redis.key+' -> exist');
+				console.log('GET '+self.redis.key+' -> exist');
 					// self.redis.val = JSON.parse(result);
 					// self.allData = JSON.parse(result);
 					checkExist = true;
 			}else{
-				//console.log('GET '+self.redis.key+' -> not exist');
+				console.log('GET '+self.redis.key+' -> not exist');
 			}
 			if(checkExist == false){
 				if(self.redis.status == 'create' && data){
-					//console.log('create redis');
+					console.log('create redis');
 					clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);//JSON.stringify(self.redis.val), redis.print);
 					clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 1800); //86400);
 					self.redis.status = 'update';
@@ -1282,7 +1282,7 @@ function updateRedistCron(data){
 				}
 			}else{
 				if(self.redis.status == 'update' && data){
-					//console.log('update redis');
+					console.log('update redis');
 					clientRedis.set(self.redis.key, JSON.stringify(data), redis.print);
 					clientRedis.expireat(self.redis.key, parseInt((+new Date)/1000) + 1800); //86400);
 					self.redis.val = data;
@@ -1421,7 +1421,7 @@ function saveContinue(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
                             }
                         }
 
-						// //console.log('produk save access : '+access+', access2 : '+access+', accessRole : '+accessRole+', countobj : '+countobj)
+						// console.log('produk save access : '+access+', access2 : '+access+', accessRole : '+accessRole+', countobj : '+countobj)
 						if(accessRole == true){
 							let newProdlink = usersDataDb.child(UID+'/produk');
 							let tmpProd = newProdlink.push();
@@ -1474,7 +1474,7 @@ function saveContinue(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
 					}else{
 						timerGet1.get++;
 						timerGet1.status = true;
-						//console.log('id_produk exist')
+						console.log('id_produk exist')
 					}
 					setTimeout(getData, 0);
 				}else{
@@ -1487,7 +1487,7 @@ function saveContinue(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
 				}
 			}else{
 				// saveContinue(data,where,UID,c);
-				//console.log(data.length+' '+c+' baru uploaded -> ');
+				console.log(data.length+' '+c+' baru uploaded -> ');
 				if(c == 'getProdukSale'){
 					callTime.getProdukSale = true;
 				}
@@ -1495,7 +1495,7 @@ function saveContinue(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
 					callTime.getProdukNotSale = true;
 				}
 				if(c == 'transaksi'){
-					//console.log('save continue---------------------------------------------'+c)
+					console.log('save continue---------------------------------------------'+c)
 					synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket);
 				}
 			}
@@ -1509,7 +1509,7 @@ function saveContinue(data,where,UID,c,_w, dataHasilSeleksi,idMarket){
 			callTime.getProdukNotSale = true;
 		}
 		if(c == 'transaksi'){
-			//console.log('save continue---------------------------------------------'+c)
+			console.log('save continue---------------------------------------------'+c)
 			synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket);
 		}
 	}
@@ -1765,7 +1765,7 @@ function extractTransaction(idMarket,c,_w,UID){
 							timerGet2.get--;
 							timerGet2.status = true;
 						}
-						//console.log('done getCustomerBL');
+						console.log('done getCustomerBL');
 					}else{
 						timerGet2.get--;
 						timerGet2.status = true;
@@ -2047,7 +2047,7 @@ function extractTransaction(idMarket,c,_w,UID){
 									}
 								}
 							});
-							//console.log(getTransactionSellerSuccess.length+' getTransactionSellerSuccess data dataHasilSeleksi '+dataHasilSeleksi.length);
+							console.log(getTransactionSellerSuccess.length+' getTransactionSellerSuccess data dataHasilSeleksi '+dataHasilSeleksi.length);
 							if(dataHasilSeleksi.length > 0){
 								let dataNotValidOrValid = {
 									valid:[],
@@ -2082,7 +2082,7 @@ function extractTransaction(idMarket,c,_w,UID){
 								self.getdata[idGet]['getTransactionSellerSuccess'] = dataNotValidOrValid;
 								generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idMarket);
 							}else{
-								//console.log('else getTransactionSellerSuccess')
+								console.log('else getTransactionSellerSuccess')
 								// callTime.getTransaction = true;
 								timerGet2.get--;
 								timerGet2.status = true;
@@ -2091,7 +2091,7 @@ function extractTransaction(idMarket,c,_w,UID){
 							timerGet2.get--;
 							timerGet2.status = true;
 						}
-						//console.log('done getTransactionSellerSuccess');
+						console.log('done getTransactionSellerSuccess');
 					}else{
 						timerGet2.get--;
 						timerGet2.status = true;
@@ -2373,7 +2373,7 @@ function extractTransaction(idMarket,c,_w,UID){
 									}
 								}
 							});
-							//console.log(getTransactionSellerFailed.length+' getTransactionSellerFailed data dataHasilSeleksi '+dataHasilSeleksi.length);
+							console.log(getTransactionSellerFailed.length+' getTransactionSellerFailed data dataHasilSeleksi '+dataHasilSeleksi.length);
 							if(dataHasilSeleksi.length > 0){
 								let dataNotValidOrValid = {
 									valid:[],
@@ -2408,7 +2408,7 @@ function extractTransaction(idMarket,c,_w,UID){
 								self.getdata[idGet]['getTransactionSellerFailed'] = dataNotValidOrValid;
 								generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idMarket);
 							}else{
-								//console.log('else getTransactionSellerFailed')
+								console.log('else getTransactionSellerFailed')
 								// callTime.getTransaction = true;
 								timerGet2.get--;
 								timerGet2.status = true;
@@ -2417,7 +2417,7 @@ function extractTransaction(idMarket,c,_w,UID){
 							timerGet2.get--;
 							timerGet2.status = true;
 						}
-						//console.log('done getTransactionSellerFailed');
+						console.log('done getTransactionSellerFailed');
 					}else{
 						timerGet2.get--;
 						timerGet2.status = true;
@@ -2425,7 +2425,7 @@ function extractTransaction(idMarket,c,_w,UID){
 				}else{
 					// done
 					timerGet2.status = false;
-					//console.log('done load');
+					console.log('done load');
 					// callTime.getTransaction = true;
 				}
 				setTimeout(pushTransaction,0);
@@ -2433,17 +2433,17 @@ function extractTransaction(idMarket,c,_w,UID){
 				if(timerGet2.get > 0 && timerGet2.status == false){
 					setTimeout(pushTransaction,0);
 				}else{
-					//console.log('finish load');
+					console.log('finish load');
 					callTime.getTransaction = true;
 					// setTimeout(pushTransaction,0);
 				}
 			}
 		},0);
 	}else{
-		//console.log('tidak ada ',timerGet2.get);
+		console.log('tidak ada ',timerGet2.get);
 		callTime.getTransaction = true;
 	}	
-	//console.log('timerGet2 ',timerGet2)
+	console.log('timerGet2 ',timerGet2)
 	
 	// if(getTransactionBuyerFailed.length > 0){
 	// 	// callTime.getTransaction = true;
@@ -2458,13 +2458,13 @@ function extractTransaction(idMarket,c,_w,UID){
 
 function generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,idMarket){
 	let idGet = idMarket.i;
-	//console.log('generateProdukTransaction')
+	console.log('generateProdukTransaction')
 	// self.regulasiData.allData = [];
 	let allData = [];
 	// self.regulasiData.dataList = [];
 	let dataList = [];
 	if(dataNotValidOrValid.notValid.length > 0){
-		//console.log('ada data not valid '+dataNotValidOrValid.notValid.length)
+		console.log('ada data not valid '+dataNotValidOrValid.notValid.length)
 		// return;
 		// self.regulasiData.allData = dataNotValidOrValid.notValid;
 		allData = dataNotValidOrValid.notValid;
@@ -2474,7 +2474,7 @@ function generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,i
 		// setTimeout(function waitLData(){
 		// 	// if(self.regulasiData.dataList.length > 0){
 		// 	if(feed == 'selesaiUploadProduk'){//}.length > 0){
-		// 		//console.log('waitdata push transaksi '+feed+', count :: '+cXY)
+		// 		console.log('waitdata push transaksi '+feed+', count :: '+cXY)
 		// 		// timerGet1.get = 1;
 		// 		// timerGet1.status = true;
 		// 		// setTimeout(function autoPutProduk(){
@@ -2504,7 +2504,7 @@ function generateProdukTransaction(dataNotValidOrValid,dataHasilSeleksi,UID,_w,i
 
 function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket){
 	let idGet = idMarket.i;
-	// //console.log('synceProdukMarketPlaceInvent '+dataHasilSeleksi.length+' data produk list '+self.default.data[UID].produkList.length)
+	// console.log('synceProdukMarketPlaceInvent '+dataHasilSeleksi.length+' data produk list '+self.default.data[UID].produkList.length)
 	if(dataHasilSeleksi.length > 0 && self.default.data[UID].produkList.length > 0){
 		let idOrigin = [];
 		let	idInvent = [];
@@ -2531,7 +2531,7 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket){
 				}; 
 			}
 		});
-		// //console.log('idOrigin after '+idOrigin.length+' idInvent '+idInvent.length)
+		// console.log('idOrigin after '+idOrigin.length+' idInvent '+idInvent.length)
 		let dataToPush = [];
 		let continueListProduk = false;
 		let prductTmp = [];
@@ -2611,7 +2611,7 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket){
 						}
 					}
 				});
-				// //console.log('data to push transaksi '+dataToPush.length)
+				// console.log('data to push transaksi '+dataToPush.length)
 				if(dataToPush.length > 0 && replaceProduk == true){
 					if(dataToPush.length == 1 && prductTmp.length == 1){
 						v.produk = dataToPush;
@@ -2651,7 +2651,7 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket){
 		if(continueListProduk == true){
 			extractCustomerTransaction(dataHasilSeleksi,'transaksi',UID,_w,idMarket);
 		}else{
-			//console.log('err :: synceProdukMarketPlaceInvent '+UID)
+			console.log('err :: synceProdukMarketPlaceInvent '+UID)
 			// callTime.getTransaction = true;
 			timerGet2.get--;
 			timerGet2.status = true;
@@ -2661,7 +2661,7 @@ function synceProdukMarketPlaceInvent(dataHasilSeleksi,UID,_w,idMarket){
 
 function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 	if(dataHasilSeleksi.length > 0 && (where == 'transaksi' || where == 'getCustomerBL') && self.allData.customers.length > 0){
-		// //console.log('extractCustomerTransaction if '+where)
+		// console.log('extractCustomerTransaction if '+where)
 		let emailOrigin = [];
 		let phoneOrigin = [];
 		let customerOrigin = [];
@@ -2780,9 +2780,9 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 			});
 
 
-			//console.log('extractCustomerTransaction if '+where+' Upload '+unikMailPhoneSama.length+' new Customer ');
+			console.log('extractCustomerTransaction if '+where+' Upload '+unikMailPhoneSama.length+' new Customer ');
 			if(unikMailPhoneSama.length > 0 ){//&& where != 'getCustomerBL'){
-				// //console.log('unikMailPhone tidak sama '+unikMailPhoneSama.length)
+				// console.log('unikMailPhone tidak sama '+unikMailPhoneSama.length)
 				if(regionDefault.province.length > 0 && regionDefault.city.length > 0 && regionDefault.districts.length > 0){
 					synceDataRegion(dataHasilSeleksi,unikMailPhoneSama,_w,UID,idMarket,where);
 				}else{
@@ -2805,10 +2805,10 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 			}else{
 				if(where == 'transaksi'){
 					// self.changeProgress(self.progressBar.all);
-					// //console.log('transaksi finis')
+					// console.log('transaksi finis')
 					finishingTransaction(dataHasilSeleksi,UID,_w,idMarket);
 				}else if(where == 'getCustomerBL'){
-					//console.log('customer finis')
+					console.log('customer finis')
 					timerGet2.get--;
 					timerGet2.status = true;
 					// self.notifyError2('Tidak ada data cuastomer baru!','warn');
@@ -2855,7 +2855,7 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 					unikMailPhone.push(v);
 				}
 			});
-			// //console.log('unikmailphone1 '+unikMailPhone.length)
+			// console.log('unikmailphone1 '+unikMailPhone.length)
 			if(unikMailPhone.length > 0 ){
 				if(regionDefault.province.length > 0 && regionDefault.city.length > 0 && regionDefault.districts.length > 0){
 					synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket,where);
@@ -2881,9 +2881,9 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 				if(where == 'transaksi'){
 					// self.changeProgress(self.progressBar.all);
 					// finishingTransaction(dataHasilSeleksi);
-					//console.log('finis transaksi1')
+					console.log('finis transaksi1')
 				}else if(where == 'getCustomerBL'){
-					//console.log('finis customer')
+					console.log('finis customer')
 					// self.notifyError2('Tidak ada data customer baru!','warn');
 					// self.aSelectGet = {id : '', name : 'Select option get'};
 					// self.changeProgress(self.progressBar.all);
@@ -2891,7 +2891,7 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 			}
 		}
 	}else if(dataHasilSeleksi.length > 0 && (where == 'transaksi' || where == 'getCustomerBL') && self.allData.customers.length == 0){
-		//console.log('customer leng null')
+		console.log('customer leng null')
 		callTime.getTransaction = true;
 		/*let getCusData = true;
 		let lengthData = 1;
@@ -2916,7 +2916,7 @@ function extractCustomerTransaction(dataHasilSeleksi,where,UID,_w,idMarket){
 						}
 					},function (error){
 						getCusData = false;
-						//console.log(error)
+						console.log(error)
 					});
 					lengthData = 0;
 					setTimeout(runCus,0);
@@ -3073,9 +3073,9 @@ function filter_customer(data){
 
 function filter_customer2(data,where,tmpLength,dataHasilSeleksi,UID,_w,idMarket){
 	if(self.allData.customers && self.allData.customers.length > 0){
-		//console.log('self.allData.customers before '+self.allData.customers.length)
+		console.log('self.allData.customers before '+self.allData.customers.length)
 	}else{
-		//console.log('err :: customer empty')
+		console.log('err :: customer empty')
 		self.allData.customers = [];
 	}
 	let data_arr_push = [];
@@ -3114,56 +3114,56 @@ function filter_customer2(data,where,tmpLength,dataHasilSeleksi,UID,_w,idMarket)
 			// if(data_arr_push.length > 0){
 			// 	if(where == 'transaksi'){
 			// 		if(data_arr_push.length == tmpLength){
-			// 			//console.log('sukses update self.allData.customers '+self.allData.customers.length)
+			// 			console.log('sukses update self.allData.customers '+self.allData.customers.length)
 			// 			finishingTransaction(dataHasilSeleksi,UID,_w,idMarket);
 			// 			// timerGet2.get--;
 			// 			// timerGet2.status = true;
 			// 		}else{
-			// 			//console.log('err :: filter_customer2 '+data_arr_push.length)
+			// 			console.log('err :: filter_customer2 '+data_arr_push.length)
 			// 			timerGet2.get--;
 			// 			timerGet2.status = true;
 			// 		}
 			// 	}else if(where == 'getCustomerBL' ){
 			// 		if(data_arr_push.length == tmpLength){
-			// 			//console.log('sukses update self.allData.customers '+self.allData.customers.length)
+			// 			console.log('sukses update self.allData.customers '+self.allData.customers.length)
 			// 			timerGet2.get--;
 			// 			timerGet2.status = true;
 			// 		}else{
-			// 			//console.log('err :: filter_customer2 '+data_arr_push.length)
+			// 			console.log('err :: filter_customer2 '+data_arr_push.length)
 			// 			timerGet2.get--;
 			// 			timerGet2.status = true;
 			// 		}
 			// 	}
 			// }else{
-			// 	//console.log('else update self.allData.customers')
+			// 	console.log('else update self.allData.customers')
 			// }
 		}
 	});
 	if(data_arr_push.length > 0){
 		if(where == 'transaksi'){
 			if(data_arr_push.length == tmpLength){
-				//console.log('sukses update self.allData.customers '+self.allData.customers.length)
+				console.log('sukses update self.allData.customers '+self.allData.customers.length)
 				finishingTransaction(dataHasilSeleksi,UID,_w,idMarket);
 				// timerGet2.get--;
 				// timerGet2.status = true;
 			}else{
-				//console.log('err :: filter_customer2 '+data_arr_push.length)
+				console.log('err :: filter_customer2 '+data_arr_push.length)
 				timerGet2.get--;
 				timerGet2.status = true;
 			}
 		}else if(where == 'getCustomerBL' ){
 			if(data_arr_push.length == tmpLength){
-				//console.log('sukses update self.allData.customers '+self.allData.customers.length)
+				console.log('sukses update self.allData.customers '+self.allData.customers.length)
 				timerGet2.get--;
 				timerGet2.status = true;
 			}else{
-				//console.log('err :: filter_customer2 '+data_arr_push.length)
+				console.log('err :: filter_customer2 '+data_arr_push.length)
 				timerGet2.get--;
 				timerGet2.status = true;
 			}
 		}
 	}else{
-		//console.log('else update self.allData.customers')
+		console.log('else update self.allData.customers')
 	}
 };
 
@@ -3180,12 +3180,12 @@ function filter_customer2(data,where,tmpLength,dataHasilSeleksi,UID,_w,idMarket)
 function generateLocalMap(){
 	clientRedis.get(self.redis.key2, function (error, result) {
 		if (result) {
-			//console.log('GET '+self.redis.key2+' -> exist');
+			console.log('GET '+self.redis.key2+' -> exist');
 			regionDefault = JSON.parse(result);
 		}else{
-			//console.log('GET '+self.redis.key+' -> not exist');
+			console.log('GET '+self.redis.key+' -> not exist');
 			localMap.once('value', function(snapshot){
-				//console.log('create '+self.redis.key2)
+				console.log('create '+self.redis.key2)
 				let alldMap = snapshot.val();
 				let tmp_localMap = _extractRegion(alldMap);
 				clientRedis.set(self.redis.key2, JSON.stringify(tmp_localMap), redis.print);//JSON.stringify(self.redis.val), redis.print);
@@ -3197,7 +3197,7 @@ function generateLocalMap(){
 
 
 function synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket,where){
-	//console.log('synceDataRegion '+dataHasilSeleksi.length)
+	console.log('synceDataRegion '+dataHasilSeleksi.length)
 	// if(where == 'getCustomerBL' || where == 'getTransactionSellerSuccess' || where == 'getTransactionSellerFailed'){
 	// 	self.progressBar.all = unikMailPhone.length;
 	// }
@@ -3405,11 +3405,11 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket,where){
 						}
 					});
 				}else{
-					//console.log('data location salah')
+					console.log('data location salah')
 				}
 			}
 		});
-		// //console.log(synceDataRegionTransaction.length);
+		// console.log(synceDataRegionTransaction.length);
 		if(synceDataRegionTransaction.length > 0){
 			genderDataCustomer(dataHasilSeleksi,unikMailPhone,synceDataRegionTransaction,_w,UID,idMarket,where);
 		}else{
@@ -3417,7 +3417,7 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket,where){
 			timerGet2.status = true;
 		}
 	}else{
-		//console.log('err :: synceDataRegion')
+		console.log('err :: synceDataRegion')
 		timerGet2.get--;
 		timerGet2.status = true;
 	}
@@ -3426,7 +3426,7 @@ function synceDataRegion(dataHasilSeleksi,unikMailPhone,_w,UID,idMarket,where){
 function finishingTransaction(dataHasilSeleksi,UID,_w,idMarket){
 	let idGet = idMarket.i;
 	if(dataHasilSeleksi.length > 0 && self.allData.customers.length > 0){
-		// //console.log('finishingTransaction')
+		// console.log('finishingTransaction')
 		_foreach(dataHasilSeleksi, function (v, k, o){
 			if(v.customer){
 				let feedback = v.customer;
@@ -3499,7 +3499,7 @@ function finishingTransaction(dataHasilSeleksi,UID,_w,idMarket){
 
 		generateSupplier(dataHasilSeleksi,UID,_w,idMarket);
 	}else{
-		//console.log('else finishingTransaction')
+		console.log('else finishingTransaction')
 		timerGet2.get--;
 		timerGet2.status = true;
 	}
@@ -3508,7 +3508,7 @@ function finishingTransaction(dataHasilSeleksi,UID,_w,idMarket){
 function generateSupplier(dataHasilSeleksi,UID,_w,idMarket){
 	let idGet = idMarket.i;
 	if(dataHasilSeleksi.length > 0 && self.default.data[UID].brand){
-		// //console.log('generateSupplier')
+		// console.log('generateSupplier')
 		let supplier = {
 			add:'',
 			contact:{},
@@ -3586,7 +3586,7 @@ function generateSupplier(dataHasilSeleksi,UID,_w,idMarket){
 		}
 
 		if(createNewBrand == true){
-			//console.log('create brand true')
+			console.log('create brand true')
 			// timerGet1.get = 1;
 			// timerGet1.status = true;
 			// setTimeout(function autoPutProduk(){
@@ -3605,7 +3605,7 @@ function generateSupplier(dataHasilSeleksi,UID,_w,idMarket){
 		}
 
 	}else{
-		//console.log('err :: generateSupplier');
+		console.log('err :: generateSupplier');
 		timerGet2.get--;
 		timerGet2.status = true;
 		
@@ -3630,7 +3630,7 @@ function generateSupplier(dataHasilSeleksi,UID,_w,idMarket){
 function ongkirGenerateData(dataHasilSeleksi,UID,_w,idMarket){
 	let idGet = idMarket.i;
 	if(dataHasilSeleksi.length > 0){
-		// //console.log('ongkirGenerateData')
+		// console.log('ongkirGenerateData')
 		_foreach(dataHasilSeleksi, function (v, k, o){
 			if(v.customer.status == 'none'){
 				let identity = v.customer.identity.address;
@@ -3708,9 +3708,9 @@ function ongkirGenerateData(dataHasilSeleksi,UID,_w,idMarket){
 		let dataCompare = self.default.data[UID]['transaksiImport'+_w];
 		_foreach(dataHasilSeleksi, function (v2, k2, obj2) {
 			if(v2.marketPlace.id){
-				// //console.log('tOf before'+tOf)
+				// console.log('tOf before'+tOf)
 				tOf = _existTransaction(v2,self.default.data[UID]['transaksiImport'+_w],_w);//checkExistTransaction
-				// //console.log('tOf after'+tOf)
+				// console.log('tOf after'+tOf)
 				if(tOf == false){
 					// dmpData.push(v2);
 					self.produkPost.transaksi[idGet].push(v2)
@@ -3718,19 +3718,19 @@ function ongkirGenerateData(dataHasilSeleksi,UID,_w,idMarket){
 			}
 		});
 		
-		//console.log('dataHasilSeleksi1 :: '+dataHasilSeleksi.length+' dataCompare:'+dataCompare.length+' dmpData :: '+self.produkPost.transaksi[idGet].length)
+		console.log('dataHasilSeleksi1 :: '+dataHasilSeleksi.length+' dataCompare:'+dataCompare.length+' dmpData :: '+self.produkPost.transaksi[idGet].length)
 		if(self.produkPost.transaksi[idGet].length > 0){
-			//console.log(self.produkPost.transaksi[idGet].length+' data baru "'+idGet+'" di '+_w+' loaded!');
+			console.log(self.produkPost.transaksi[idGet].length+' data baru "'+idGet+'" di '+_w+' loaded!');
 			saveOrder(idMarket,_w,UID);
 			// callTime.getTransaction = true;
 		}else{
-			//console.log('Tidak ada transaksi baru "'+idGet+'" di '+_w+'!');
+			console.log('Tidak ada transaksi baru "'+idGet+'" di '+_w+'!');
 			// callTime.getTransaction = true;
 			timerGet2.get--;
 			timerGet2.status = true;
 		}
 	}else{
-		//console.log('err :: ongkirGenerateData')
+		console.log('err :: ongkirGenerateData')
 		// callTime.getTransaction = true;
 		timerGet2.get--;
 		timerGet2.status = true;
@@ -3740,7 +3740,7 @@ function ongkirGenerateData(dataHasilSeleksi,UID,_w,idMarket){
 function saveOrder(idMarket,_w,UID){
 	let idGet = idMarket.i;
 	if(self.produkPost.transaksi[idGet] && self.produkPost.transaksi[idGet].length > 0){
-		// //console.log('saveOrder, dataSave:'+self.produkPost.transaksi[idGet].length+' idGet:'+idGet+' _w:'+_w+' UID:'+UID)
+		// console.log('saveOrder, dataSave:'+self.produkPost.transaksi[idGet].length+' idGet:'+idGet+' _w:'+_w+' UID:'+UID)
 		timerGet1.get = 1;
 		timerGet1.status = true;
 		let transaksiCheck = true;
@@ -3749,14 +3749,14 @@ function saveOrder(idMarket,_w,UID){
 		setTimeout(function autoPutTransaction(){
 			if(timerGet1.get > 0){
 				if(timerGet1.status == true && dataSave[timerGet1.get-1]){
-					// //console.log('transaksiCheck before'+transaksiCheck)
+					// console.log('transaksiCheck before'+transaksiCheck)
 					transaksiCheck = _existTransaction(dataSave[timerGet1.get-1],self.default.data[UID]['transaksiImport'+_w],_w);
 					timerGet1.status = false;
-					// //console.log('transaksiCheck after'+transaksiCheck)
+					// console.log('transaksiCheck after'+transaksiCheck)
 					if(transaksiCheck == false && (timerGet1.get-1) < dataSave.length){
 						
 
-						// //console.log('push data transaksi:'+(timerGet1.get-1));
+						// console.log('push data transaksi:'+(timerGet1.get-1));
 						let dataConverUp = dataSave[timerGet1.get-1];
 						let nd = new Date(dataConverUp.create);
 						let idPO = nd.getDate()+
@@ -3777,7 +3777,7 @@ function saveOrder(idMarket,_w,UID){
 						
 						let getDataExtract = _saveOrder(coverPhpParams);
 						if(getDataExtract){
-							// //console.log('push '+getDataExtract.p)
+							// console.log('push '+getDataExtract.p)
 							let dataPost = {
 								pass: self._paramsData.pass,
 								met: self._paramsData.met,
@@ -3819,7 +3819,7 @@ function saveOrder(idMarket,_w,UID){
 								accessRole = true;
 							}
 
-							// //console.log('accessOrder : '+accessOrder+', accessRole : '+accessRole+', countobj : '+countobj)
+							// console.log('accessOrder : '+accessOrder+', accessRole : '+accessRole+', countobj : '+countobj)
 							if(accessRole == true){
 								self.produkPost.transaksi[getDataExtract.p]['pushData'] = [];
 								if(getDataExtract.d.updateMarketplace.length > 0){
@@ -3881,7 +3881,7 @@ function saveOrder(idMarket,_w,UID){
 												}
 											}
 										}else{
-											//console.log('saveDataOrder1 finish')
+											console.log('saveDataOrder1 finish')
 										}
 									},0);
 								}
@@ -3900,7 +3900,7 @@ function saveOrder(idMarket,_w,UID){
 									// 			[newKey]: newVal
 									// 		});
 									// 		usersRef.once("child_added").then(snapOrder => {//on("child_added", function(feedbackAdd) {
-									// 			//console.log('data push ________________________________ 1 ')
+									// 			console.log('data push ________________________________ 1 ')
 									// 			self.allData.users[UID].order[newCusID] = {};
 									// 			self.allData.users[UID].order[newCusID][newKey] = newVal;
 									// 			if(self.allData.users[UID].order){
@@ -3916,7 +3916,7 @@ function saveOrder(idMarket,_w,UID){
 									// 			let aLink = db.ref(newPostOrder[index].link);
 									// 			aLink.set(newVal);
 									// 			aLink.once("child_added").then(snapOrder2 => {//on("child_added", function(feedbackAdd) {
-									// 				//console.log('data push ________________________________ 2 ')
+									// 				console.log('data push ________________________________ 2 ')
 									// 				self.allData.users[UID].order[newCusID][newKey] = newVal;
 									// 				if(self.allData.users[UID].order){
 									// 					existTableOrder = true;
@@ -3934,7 +3934,7 @@ function saveOrder(idMarket,_w,UID){
 									// 			});
 
 									// 			usersRef2.once("child_added").then(snapOrder3 => {//on("child_added", function(feedbackAdd) {
-									// 				//console.log('data push ________________________________ 3 ')
+									// 				console.log('data push ________________________________ 3 ')
 									// 				self.allData.users[UID].order[newCusID] = {};
 									// 				self.allData.users[UID].order[newCusID][newKey] = newVal;
 									// 				if(self.allData.users[UID].order){
@@ -3964,7 +3964,7 @@ function saveOrder(idMarket,_w,UID){
 														[newKey]: newVal
 													});
 													usersRef.once("child_added").then(snapOrder => {
-														// //console.log('data push ________________________________ 1 ')
+														// console.log('data push ________________________________ 1 ')
 														self.allData.users[UID].order[newCusID] = {};
 														self.allData.users[UID].order[newCusID][newKey] = newVal;
 														if(self.allData.users[UID].order){
@@ -3985,7 +3985,7 @@ function saveOrder(idMarket,_w,UID){
 														let aLink = db.ref(newPostOrder[tmpIndex1-1].link);
 														aLink.set(newVal);
 														aLink.once("child_added").then(snapOrder2 => {
-															// //console.log('data push ________________________________ 2 ')
+															// console.log('data push ________________________________ 2 ')
 															self.allData.users[UID].order[newCusID][newKey] = newVal;
 															if(self.allData.users[UID].order){
 																existTableOrder = true;
@@ -4007,7 +4007,7 @@ function saveOrder(idMarket,_w,UID){
 														});
 
 														usersRef2.once("child_added").then(snapOrder3 => {
-															// //console.log('data push ________________________________ 3 ')
+															// console.log('data push ________________________________ 3 ')
 															self.allData.users[UID].order[newCusID] = {};
 															self.allData.users[UID].order[newCusID][newKey] = newVal;
 															if(self.allData.users[UID].order){
@@ -4036,7 +4036,7 @@ function saveOrder(idMarket,_w,UID){
 												}
 											}
 										}else{
-											//console.log('saveDataOrder2 finish')
+											console.log('saveDataOrder2 finish')
 										}
 									},0);
 								}
@@ -4053,7 +4053,7 @@ function saveOrder(idMarket,_w,UID){
 									// 	let aLink3 = db.ref(newlink);
 									// 	aLink3.set(newval_stok);
 									// 	aLink3.once("child_added").then(feedbackAdd => {//on("child_added", function(feedbackAdd) {
-									// 		//console.log('update '+newid_produk+', '+newkey_stok)
+									// 		console.log('update '+newid_produk+', '+newkey_stok)
 									// 		self.allData.users[UID].produk[newid_produk].varian[newVarian].stok[newkey_stok] = newval_stok;
 									// 	});							
 									// }
@@ -4072,7 +4072,7 @@ function saveOrder(idMarket,_w,UID){
 												let aLink3 = db.ref(newlink);
 												aLink3.set(newval_stok);
 												aLink3.once("child_added").then(feedbackAdd => {//on("child_added", function(feedbackAdd) {
-													// //console.log('update '+newid_produk+', '+newkey_stok)
+													// console.log('update '+newid_produk+', '+newkey_stok)
 													self.allData.users[UID].produk[newid_produk].varian[newVarian].stok[newkey_stok] = newval_stok;
 
 													if((tmpIndex2-1) < tmpLength2){
@@ -4094,7 +4094,7 @@ function saveOrder(idMarket,_w,UID){
 												}
 											}
 										}else{
-											//console.log('saveDataOrder3 finish')
+											console.log('saveDataOrder3 finish')
 										}
 									},0);
 								}
@@ -4123,23 +4123,23 @@ function saveOrder(idMarket,_w,UID){
 							},
 							function(error, response, body){
 								// self.produkPost.kategori.push(dataConverUp);
-								//console.log('response request :: '+x);
+								console.log('response request :: '+x);
 								x = 0;
 								if(!error && response.body){
 									let _returns =  response.body;
 									// self.produkPost.transaksi[idGet+'return'].push(_returns);
-									//console.log('response push transaction ',_returns.status)
+									console.log('response push transaction ',_returns.status)
 									if(_returns.status == true && (timerGet1.get-1) < dataSave.length){
 										self.produkPost.transaksi[idGet+'return'].push(_returns);
 										// self.produkPost.transaksi.push(_returns);//dataSave[timerGet1.get-1]);
 										// let dataMarket = dataSave[timerGet1.get-1]['marketPlace']; 
 										if(_returns.dataMarket && _returns.idMarketPlace){
-											//console.log('ada marketplace')
+											console.log('ada marketplace')
 											self.default.data[UID]['transaksiImport'+_w].push(_returns.dataMarket);
 											self.allData.users[UID].marketplace[_w]['transaksiImport'][_returns.idMarketPlace] = _returns.dataMarket;
 											self.allData.marketPlaceUser[UID].marketplace[_w]['transaksiImport'][_returns.idMarketPlace] = _returns.dataMarket;
 										}else{
-											//console.log('tidak ada marketplace')
+											console.log('tidak ada marketplace')
 										}
 										timerGet1.status = true;
 										timerGet1.get++;
@@ -4165,17 +4165,17 @@ function saveOrder(idMarket,_w,UID){
 									}
 								}
 								if (error){//.code === 'ETIMEDOUT' && error.connect === true){
-									//console.log('ERRRRRRRRRRor time out',error);
+									console.log('ERRRRRRRRRRor time out',error);
 								}
 							});*/
 
 						}else{
-							//console.log('else push')
+							console.log('else push')
 						}
 					}else{
 						timerGet1.get++;
 						timerGet1.status = true;
-						//console.log('id_produk exist')
+						console.log('id_produk exist')
 					}
 					setTimeout(autoPutTransaction, 0);
 				}else{
@@ -4189,7 +4189,7 @@ function saveOrder(idMarket,_w,UID){
 					x++;
 				}
 			}else{
-				//console.log('done upload transaction '+dataSave.length)
+				console.log('done upload transaction '+dataSave.length)
 				timerGet2.get--;
 				timerGet2.status = true;
 				// self.aSelectGet = {id : '', name : 'Select option get'};
@@ -4197,7 +4197,7 @@ function saveOrder(idMarket,_w,UID){
 			}
 		},0);
 	}else{
-		//console.log('err :: saveOrder')
+		console.log('err :: saveOrder')
 		// callTime.getTransaction = true;
 		timerGet2.get--;
 		timerGet2.status = true;
@@ -4209,9 +4209,9 @@ function rolemembershipModify(data){
 	let keymembership = 'local:membership';
 	let categoryPayment = '';
 	if(data){
-		//console.log('ada data marketPlace')
+		console.log('ada data marketPlace')
 	}else{
-		//console.log('tidak ada data marketPlace')
+		console.log('tidak ada data marketPlace')
 		data = self.allData.marketPlaceUser;
 	}
 	if(self.access){
@@ -4230,11 +4230,11 @@ function rolemembershipModify(data){
 		if(self.access){
 			clientRedis.get(keymembership, function (error, result) {
 				if (result) {
-					//console.log('GET '+keymembership+' -> exist');
+					console.log('GET '+keymembership+' -> exist');
 					checkExist = true;
 					categoryPayment = JSON.parse(result);
 				}else{
-					//console.log('GET '+keymembership+' -> not exist');
+					console.log('GET '+keymembership+' -> not exist');
 				}
 				if(checkExist == false){
 					paymentDb.once("value", function(snapshot) {
@@ -4287,11 +4287,11 @@ function rolemembershipModify(data){
 
 			});
 		}else{
-			//console.log('err rolemembershipModify')
+			console.log('err rolemembershipModify')
 			// viewDataCallbcak('error',req,res);
 		}
 	}else{
-		//console.log('err rolemembershipModify')
+		console.log('err rolemembershipModify')
 		// viewDataCallbcak('error',req,res);
 	}
 };
@@ -4325,14 +4325,14 @@ function genderDataCustomer(dataHasilSeleksi,unikMailPhone,synceDataRegionTransa
 					
 					if(!error && response.body){
 						let _returns =  response.body;
-						//console.log('response get info gender ',_returns)
+						console.log('response get info gender ',_returns)
 						if(_returns.status == true && (timerGet1.get-1) < synceDataRegionTransaction.length){
 							if(_returns.data && (_returns.data == 'pria' || _returns.data == 'wanita')){
-								//console.log('ada gender '+ _returns.data+', '+timerGet1.get+', '+synceDataRegionTransaction[timerGet1.get-1].marketPlace.userName)
+								console.log('ada gender '+ _returns.data+', '+timerGet1.get+', '+synceDataRegionTransaction[timerGet1.get-1].marketPlace.userName)
 								synceDataRegionTransaction[timerGet1.get-1].gender = _returns.data;
 								unikMailPhone[timerGet1.get-1].identity.gender = _returns.data;
 							}else{
-								//console.log('data gender kosong'+', '+timerGet1.get+', '+synceDataRegionTransaction[timerGet1.get-1].marketPlace.userName)
+								console.log('data gender kosong'+', '+timerGet1.get+', '+synceDataRegionTransaction[timerGet1.get-1].marketPlace.userName)
 								synceDataRegionTransaction[timerGet1.get-1].gender = 'pria';
 								unikMailPhone[timerGet1.get-1].identity.gender = 'pria';
 							}
@@ -4343,7 +4343,7 @@ function genderDataCustomer(dataHasilSeleksi,unikMailPhone,synceDataRegionTransa
 					}else{
 						synceDataRegionTransaction[timerGet1.get-1].gender = 'pria';
 						unikMailPhone[timerGet1.get-1].identity.gender = 'pria';
-						//console.log('ERRRRRRRRRRor time out',error);
+						console.log('ERRRRRRRRRRor time out',error);
 					}
 					// self.produkPost.transaksi[idGet+'_cus'].push({
 					// 	synceDataRegionTransaction:synceDataRegionTransaction[timerGet1.get-1],
@@ -4402,12 +4402,12 @@ function genderDataCustomer(dataHasilSeleksi,unikMailPhone,synceDataRegionTransa
 			if(where == 'transaksi'){
 				// self.finishingTransaction(dataHasilSeleksi);
 				customerImport(dataHasilSeleksi,unikMailPhone,synceDataRegionTransaction,_w,UID,idMarket,where);
-				//console.log('finishing euy')
+				console.log('finishing euy')
 				// timerGet2.get--;
 				// timerGet2.status = true;
 			}else if(where == 'getCustomerBL'){
 				customerImport(dataHasilSeleksi,unikMailPhone,synceDataRegionTransaction,_w,UID,idMarket,where);
-				// //console.log('done indfo')
+				// console.log('done indfo')
 				
 			}
 		}
@@ -4436,7 +4436,7 @@ function customerImport(dataHasilSeleksi,unikMailPhone,synceDataRegionTransactio
 			}
 		}
 	}else{
-		//console.log('err :: customerImport');
+		console.log('err :: customerImport');
 		if(where == 'transaksi'){
 			// self.finishingTransaction(dataHasilSeleksi);
 			timerGet2.get--;
@@ -4450,7 +4450,7 @@ function customerImport(dataHasilSeleksi,unikMailPhone,synceDataRegionTransactio
 
 self.newDataPostCus = [];
 function saveDataCustomer(pushData,dataHasilSeleksi,unikMailPhone,_w,UID,idMarket,where){
-	//console.log('saveDataCustomer '+pushData.length+' self.allData.customers before '+self.allData.customers.length)
+	console.log('saveDataCustomer '+pushData.length+' self.allData.customers before '+self.allData.customers.length)
 	self.newDataPostCus = [];
 	if(pushData.length > 0){
 		if(self.access[UID]){
@@ -4474,7 +4474,7 @@ function saveDataCustomer(pushData,dataHasilSeleksi,unikMailPhone,_w,UID,idMarke
 			existTableOrder = true;
 		}else{
 			// self.allData.customers = {};
-			//console.log('tidak ada list customers');
+			console.log('tidak ada list customers');
 		}
 
 		if((accessPelanggan > countobj && accessPelanggan != false) || accessPelanggan == "unlimited"){
@@ -4500,7 +4500,7 @@ function saveDataCustomer(pushData,dataHasilSeleksi,unikMailPhone,_w,UID,idMarke
 							let tmpIdpushCus = newDbLink.push();
 							tmpIdpushCus.set(pushData[tmpIndex-1].marketPlace);
 							tmpIdpushCus.once("child_added").then(snapImport => {
-								//console.log('sukses upload customer '+tmpIndex+'==== '+postId+' :: '+tmpIdpushCus.key)
+								console.log('sukses upload customer '+tmpIndex+'==== '+postId+' :: '+tmpIdpushCus.key)
 								self.newDataPostCus.push({
 									keyCus: postId,
 									valCus: pushData[tmpIndex-1],
@@ -4624,7 +4624,7 @@ app.get('/delete_customer', function(req, res, next) {
 				}
 			});
 		}
-		//console.log('length cus '+tmp_dataCustomer.length)
+		console.log('length cus '+tmp_dataCustomer.length)
 		if(tmp_dataCustomer.length > 0){
 			let tmpPlus = true;
 			let tmpLength = tmp_dataCustomer.length;
@@ -4636,7 +4636,7 @@ app.get('/delete_customer', function(req, res, next) {
 						let delDataDB = db.ref('customer/'+tmp_dataCustomer[tmpIndex-1].key);
 						delDataDB.remove()
 						.then(function() {
-							//console.log('remove success '+tmp_dataCustomer[tmpIndex-1].key);
+							console.log('remove success '+tmp_dataCustomer[tmpIndex-1].key);
 							dataAll.push({[tmp_dataCustomer[tmpIndex-1].key]:'success'});
 							if((tmpIndex-1) < tmpLength){
 								tmpPlus = true;
@@ -4647,7 +4647,7 @@ app.get('/delete_customer', function(req, res, next) {
 							}
 						})
 						.catch(function(error) {
-							//console.log('Error deleting data:', error);
+							console.log('Error deleting data:', error);
 							dataAll.push({[tmp_dataCustomer[tmpIndex-1].key]:'failed'});
 							if((tmpIndex-1) < tmpLength){
 								tmpPlus = true;
@@ -4692,7 +4692,7 @@ app.get('/delete_allProduk', function(req, res, next) {
 				}
 			});
 		}
-		//console.log('length cus '+tmp_dataCustomer.length)
+		console.log('length cus '+tmp_dataCustomer.length)
 		if(tmp_dataCustomer.length > 0){
 			let tmpPlus = true;
 			let tmpLength = tmp_dataCustomer.length;
@@ -4704,7 +4704,7 @@ app.get('/delete_allProduk', function(req, res, next) {
 						let delDataDB = usersDataDb.child('MsaXytEmXDNMHhrcwnYpoPJ3Pdy1/produk/'+tmp_dataCustomer[tmpIndex-1].key);//db.ref('customer/'+tmp_dataCustomer[tmpIndex-1].key);
 						delDataDB.remove()
 						.then(function() {
-							//console.log('remove success '+tmp_dataCustomer[tmpIndex-1].key);
+							console.log('remove success '+tmp_dataCustomer[tmpIndex-1].key);
 							dataAll.push({[tmp_dataCustomer[tmpIndex-1].key]:'success'});
 							if((tmpIndex-1) < tmpLength){
 								tmpPlus = true;
@@ -4715,7 +4715,7 @@ app.get('/delete_allProduk', function(req, res, next) {
 							}
 						})
 						.catch(function(error) {
-							//console.log('Error deleting data:', error);
+							console.log('Error deleting data:', error);
 							dataAll.push({[tmp_dataCustomer[tmpIndex-1].key]:'failed'});
 							if((tmpIndex-1) < tmpLength){
 								tmpPlus = true;
@@ -4760,7 +4760,7 @@ app.get('/delete_allktg', function(req, res, next) {
 				}
 			});
 		}
-		//console.log('length cus '+tmp_dataCustomer.length)
+		console.log('length cus '+tmp_dataCustomer.length)
 		if(tmp_dataCustomer.length > 0){
 			let tmpPlus = true;
 			let tmpLength = tmp_dataCustomer.length;
@@ -4772,7 +4772,7 @@ app.get('/delete_allktg', function(req, res, next) {
 						let delDataDB = usersDataDb.child('MsaXytEmXDNMHhrcwnYpoPJ3Pdy1/kategoriProduk/'+tmp_dataCustomer[tmpIndex-1].key);//db.ref('customer/'+tmp_dataCustomer[tmpIndex-1].key);
 						delDataDB.remove()
 						.then(function() {
-							//console.log('remove success '+tmp_dataCustomer[tmpIndex-1].key);
+							console.log('remove success '+tmp_dataCustomer[tmpIndex-1].key);
 							dataAll.push({[tmp_dataCustomer[tmpIndex-1].key]:'success'});
 							if((tmpIndex-1) < tmpLength){
 								tmpPlus = true;
@@ -4783,7 +4783,7 @@ app.get('/delete_allktg', function(req, res, next) {
 							}
 						})
 						.catch(function(error) {
-							//console.log('Error deleting data:', error);
+							console.log('Error deleting data:', error);
 							dataAll.push({[tmp_dataCustomer[tmpIndex-1].key]:'failed'});
 							if((tmpIndex-1) < tmpLength){
 								tmpPlus = true;
@@ -4828,7 +4828,7 @@ app.get('/checkKtg', function(req, res, next) {
 			});
 		}
 		if(tmp_data.length > 0){
-			//console.log('length ktg '+tmp_data.length)
+			console.log('length ktg '+tmp_data.length)
 			res.send(tmp_data);			
 		}else{
 			res.send('tidak ada data Ktg');
