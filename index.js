@@ -4497,7 +4497,7 @@ app.get('/checkKtg', function(req, res, next) {
 			});
 		}
 		if(tmp_data.length > 0){
-			// console.log('length ktg '+tmp_data.length)
+			console.log('length ktg '+tmp_data.length)
 			res.send(tmp_data);			
 		}else{
 			res.send('tidak ada data Ktg');
