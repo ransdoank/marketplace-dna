@@ -1,12 +1,12 @@
 'use strict';
-let qs = require('querystring');
+// let qs = require('querystring');
 
 let express = require('express');
 let https = require('https');
-let http = require('http');
+// let http = require('http');
 let request = require('request');
 let path = require('path');
-let fs = require('fs');
+// let fs = require('fs');
 
 // ext module
 let _existTransaction = require('./libs/_existTransaction');
@@ -111,7 +111,7 @@ exports._setDataAccess = function(d){
 };
 
 
-let INDEX = path.join(dirReplace, '/index.html');
+// let INDEX = path.join(dirReplace, '/index.html');
 
 // SocketIO
 let server = '';
